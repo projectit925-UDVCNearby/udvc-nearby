@@ -117,11 +117,46 @@ function costLine(p) {
 }
 
 // ===== 6) เนื้อหาการ์ด =====
+// แกลเลอรีแบบสไลด์: ปัดซ้าย-ขวาได้ มีปุ่มลูกศร จุดบอกตำแหน่ง และกดรูปเพื่อดูเต็มจอ
 function gallery(p) {
   if (!p.photos || p.photos.length === 0) return "";
-  return `<div class="gallery">${p.photos
-    .map((url, i) => `<img src="${esc(url)}" alt="${esc(p.name)} รูปที่ ${i + 1}" loading="lazy">`)
-    .join("")}</div>`;
+  const n = p.photos.length;
+  const slides = p.photos.map((url, i) => `
+    <button class="slide" data-photo="${i}" aria-label="ดูรูปที่ ${i + 1} แบบเต็มจอ">
+      <img src="${esc(url)}" alt="${esc(p.name)} รูปที่ ${i + 1}" loading="lazy">
+    </button>`).join("");
+
+  // มีรูปเดียวไม่ต้องมีปุ่มเลื่อนและจุด
+  const controls = n < 2 ? "" : `
+    <button class="g-nav prev" data-gallery="-1" aria-label="รูปก่อนหน้า" disabled>‹</button>
+    <button class="g-nav next" data-gallery="1" aria-label="รูปถัดไป">›</button>
+    <span class="g-count">1 / ${n}</span>
+    <div class="g-dots">${p.photos.map((_, i) =>
+      `<button class="g-dot ${i === 0 ? "on" : ""}" data-goto="${i}" aria-label="ไปรูปที่ ${i + 1}"></button>`).join("")}</div>`;
+
+  return `<div class="gallery"><div class="g-track">${slides}</div>${controls}</div>`;
+}
+
+// ลำดับรูปที่แสดงอยู่ในแกลเลอรี (คิดจากระยะที่เลื่อนไป)
+function slideIndex(track) {
+  return Math.round(track.scrollLeft / track.clientWidth);
+}
+
+function goToSlide(track, i) {
+  track.scrollTo({ left: i * track.clientWidth, behavior: "smooth" });
+}
+
+// อัปเดตตัวเลข จุด และปุ่มลูกศร ให้ตรงกับรูปที่เห็นอยู่
+function updateGallery(track) {
+  const box = track.parentElement;
+  const n = track.children.length;
+  const i = slideIndex(track);
+  const count = box.querySelector(".g-count");
+  if (!count) return;
+  count.textContent = `${i + 1} / ${n}`;
+  box.querySelectorAll(".g-dot").forEach((d, k) => d.classList.toggle("on", k === i));
+  box.querySelector(".prev").disabled = i === 0;
+  box.querySelector(".next").disabled = i === n - 1;
 }
 
 // ปุ่ม บันทึกเป็นรายการโปรด / เพิ่มในตารางเปรียบเทียบ
@@ -253,8 +288,16 @@ function showCard(p) {
 function refreshCard() {
   if (!currentPlace || card.hidden) return;
   const top = card.scrollTop;
+  const oldTrack = cardBody.querySelector(".g-track");
+  const slide = oldTrack ? slideIndex(oldTrack) : 0;
   cardBody.innerHTML = currentPlace.kind === "dorm" ? dormCard(currentPlace) : foodCard(currentPlace);
   card.scrollTop = top;
+  // ให้แกลเลอรีอยู่ที่รูปเดิม ไม่เด้งกลับไปรูปแรก
+  const track = cardBody.querySelector(".g-track");
+  if (track && slide) {
+    track.scrollLeft = slide * track.clientWidth;
+    updateGallery(track);
+  }
 }
 
 function closeCard() {
@@ -266,11 +309,28 @@ map.on("click", closeCard);
 
 // ปุ่มในการ์ด (ใช้ event delegation เพราะเนื้อหาการ์ดถูกสร้างใหม่บ่อย)
 cardBody.addEventListener("click", e => {
+  if (!currentPlace) return;
+  const track = cardBody.querySelector(".g-track");
+
+  // แกลเลอรี: กดรูปเพื่อดูเต็มจอ / ปุ่มลูกศร / จุด
+  const slide = e.target.closest("[data-photo]");
+  if (slide) return openLightbox(currentPlace, Number(slide.dataset.photo));
+  const arrow = e.target.closest("[data-gallery]");
+  if (arrow) return goToSlide(track, slideIndex(track) + Number(arrow.dataset.gallery));
+  const dot = e.target.closest("[data-goto]");
+  if (dot) return goToSlide(track, Number(dot.dataset.goto));
+
   const btn = e.target.closest("[data-action]");
-  if (!btn || !currentPlace) return;
+  if (!btn) return;
   if (btn.dataset.action === "fav") toggleFav(currentPlace);
   if (btn.dataset.action === "compare") toggleCompare(currentPlace.id);
 });
+
+// เลื่อน/ปัดแกลเลอรีแล้วอัปเดตตัวเลขกับจุด
+// (event scroll ไม่ bubble ขึ้นมา จึงต้องดักแบบ capture)
+cardBody.addEventListener("scroll", e => {
+  if (e.target.classList?.contains("g-track")) updateGallery(e.target);
+}, true);
 
 // กรอกหน่วยไฟ/น้ำ แล้วคำนวณใหม่ทันที (อัปเดตเฉพาะบรรทัดผลรวม ช่องกรอกจะได้ไม่หลุดโฟกัส)
 cardBody.addEventListener("input", e => {
@@ -287,6 +347,109 @@ cardBody.addEventListener("submit", e => {
     e.preventDefault();
     submitReview(e.target, currentPlace);
   }
+});
+
+// ===== 7.1) ดูรูปเต็มจอ (lightbox) =====
+// เลื่อนรูป: ปุ่มลูกศร / ปุ่ม ← → บนคีย์บอร์ด / ปัดซ้าย-ขวา / กดรูปย่อด้านล่าง
+// ซูม: แตะหรือคลิกที่รูป แล้วลากเพื่อเลื่อนดูส่วนต่างๆ แตะอีกครั้งเพื่อซูมออก
+const lightbox = document.getElementById("lightbox");
+const lbImg = document.getElementById("lb-img");
+const lbStage = document.getElementById("lb-stage");
+const lbThumbs = document.getElementById("lb-thumbs");
+const ZOOM = 2.5;
+
+const lb = { photos: [], name: "", i: 0, zoomed: false, ox: 0, oy: 0 };
+
+function openLightbox(p, i) {
+  lb.photos = p.photos;
+  lb.name = p.name;
+  document.getElementById("lb-title").textContent = p.name;
+  lbThumbs.innerHTML = p.photos.map((url, k) =>
+    `<button data-lb="${k}" aria-label="รูปที่ ${k + 1}"><img src="${esc(url)}" alt=""></button>`).join("");
+  lightbox.classList.toggle("single", p.photos.length < 2);
+  showPhoto(i);
+  lightbox.showModal();
+}
+
+function showPhoto(i) {
+  const n = lb.photos.length;
+  lb.i = (i + n) % n; // วนรอบ: รูปสุดท้ายถัดไปเป็นรูปแรก
+  setZoom(false);
+  lbImg.src = lb.photos[lb.i];
+  lbImg.alt = `${lb.name} รูปที่ ${lb.i + 1}`;
+  document.getElementById("lb-count").textContent = `${lb.i + 1} / ${n}`;
+  lbThumbs.querySelectorAll("button").forEach((b, k) => {
+    b.classList.toggle("on", k === lb.i);
+    if (k === lb.i) b.scrollIntoView({ block: "nearest", inline: "center" });
+  });
+  // โหลดรูปถัดไปรอไว้ เปลี่ยนรูปจะได้ไม่กระตุก
+  new Image().src = lb.photos[(lb.i + 1) % n];
+}
+
+// ซูมโดยใช้ transform-origin เป็นจุดที่แตะ (ox, oy เป็นพิกเซลบนรูปขนาดปกติ)
+function setZoom(on, x = 0, y = 0) {
+  lb.zoomed = on;
+  lb.ox = x;
+  lb.oy = y;
+  lbImg.style.transformOrigin = `${x}px ${y}px`;
+  lbImg.style.transform = on ? `scale(${ZOOM})` : "";
+  lightbox.classList.toggle("zoomed", on);
+}
+
+document.getElementById("lb-close").addEventListener("click", () => lightbox.close());
+document.getElementById("lb-prev").addEventListener("click", () => showPhoto(lb.i - 1));
+document.getElementById("lb-next").addEventListener("click", () => showPhoto(lb.i + 1));
+lbThumbs.addEventListener("click", e => {
+  const b = e.target.closest("[data-lb]");
+  if (b) showPhoto(Number(b.dataset.lb));
+});
+
+lightbox.addEventListener("keydown", e => {
+  if (e.key === "ArrowLeft") showPhoto(lb.i - 1);
+  if (e.key === "ArrowRight") showPhoto(lb.i + 1);
+});
+
+// แตะ / ปัด / ลาก บนรูป (pointer events ใช้ได้ทั้งเมาส์และนิ้ว)
+let drag = null;
+
+lbStage.addEventListener("pointerdown", e => {
+  if (e.target !== lbImg) return;
+  drag = { x: e.clientX, y: e.clientY, startX: e.clientX, startY: e.clientY };
+  lbImg.setPointerCapture(e.pointerId);
+});
+
+lbStage.addEventListener("pointermove", e => {
+  if (!drag || !lb.zoomed) return;
+  // ตอนซูมอยู่ ลากเพื่อเลื่อนดู: ขยับจุด origin สวนทางกับนิ้ว แล้วกันไม่ให้หลุดขอบรูป
+  const k = ZOOM - 1;
+  const x = Math.min(lbImg.offsetWidth, Math.max(0, lb.ox - (e.clientX - drag.x) / k));
+  const y = Math.min(lbImg.offsetHeight, Math.max(0, lb.oy - (e.clientY - drag.y) / k));
+  drag.x = e.clientX;
+  drag.y = e.clientY;
+  setZoom(true, x, y);
+});
+
+lbStage.addEventListener("pointerup", e => {
+  if (!drag) return;
+  const dx = e.clientX - drag.startX;
+  const dy = e.clientY - drag.startY;
+  drag = null;
+  const moved = Math.hypot(dx, dy) > 10;
+
+  if (!moved) {
+    // แตะเฉยๆ = ซูมเข้า/ออก ตรงจุดที่แตะ
+    const r = lbImg.getBoundingClientRect();
+    if (lb.zoomed) setZoom(false);
+    else setZoom(true, e.clientX - r.left, e.clientY - r.top);
+  } else if (!lb.zoomed && Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) {
+    // ปัดซ้าย = รูปถัดไป, ปัดขวา = รูปก่อนหน้า
+    showPhoto(lb.i + (dx < 0 ? 1 : -1));
+  }
+});
+
+// คลิกพื้นที่ว่างรอบรูปเพื่อปิด
+lbStage.addEventListener("click", e => {
+  if (e.target === lbStage) lightbox.close();
 });
 
 // ===== 8) ส่งรีวิว =====

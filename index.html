@@ -108,6 +108,22 @@
     <p class="hint"><span class="best-key"></span> = ดีที่สุดในแถวนั้น</p>
   </dialog>
 
+  <!-- ดูรูปเต็มจอ -->
+  <dialog id="lightbox" class="lightbox" aria-label="ดูรูปภาพ">
+    <div class="lb-top">
+      <span id="lb-count" class="lb-count"></span>
+      <span id="lb-title" class="lb-title"></span>
+      <button id="lb-close" class="lb-btn" aria-label="ปิด">✕</button>
+    </div>
+    <div id="lb-stage" class="lb-stage">
+      <img id="lb-img" alt="" draggable="false">
+      <button id="lb-prev" class="lb-btn lb-nav prev" aria-label="รูปก่อนหน้า">‹</button>
+      <button id="lb-next" class="lb-btn lb-nav next" aria-label="รูปถัดไป">›</button>
+    </div>
+    <p class="lb-hint">แตะรูปเพื่อซูม · ปัดซ้าย-ขวาเพื่อเลื่อนรูป</p>
+    <div id="lb-thumbs" class="lb-thumbs"></div>
+  </dialog>
+
   <footer class="disclaimer">
     โปรเจกต์นักศึกษา ปวช.3 แผนกเทคโนโลยีสารสนเทศ ไม่ใช่เว็บไซต์ทางการของวิทยาลัย · ข้อมูลตอนนี้เป็นข้อมูลตัวอย่าง (สมมติ) · <a href="admin.html">แอดมิน</a>
   </footer>
