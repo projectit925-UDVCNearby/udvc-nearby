@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>UDVC Nearby | หน้าแอดมิน</title>
+  <meta name="robots" content="noindex">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Prompt:wght@500;600&family=Sarabun:wght@400;600&display=swap">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo" aria-hidden="true">📍</span>
+      <div>
+        <h1>UDVC Nearby</h1>
+        <p>หน้าแอดมิน · จัดการข้อมูลที่พักและร้านอาหาร</p>
+      </div>
+    </div>
+    <div class="top-actions">
+      <a href="index.html" class="btn ghost">ดูหน้าเว็บ</a>
+      <button id="logout" class="btn ghost" hidden>ออกจากระบบ</button>
+    </div>
+  </header>
+
+  <!-- ===== หน้าล็อกอิน ===== -->
+  <section id="login-view" class="login-wrap">
+    <form id="login-form" class="box login">
+      <h2>เข้าสู่ระบบแอดมิน</h2>
+      <label>อีเมล
+        <input type="email" id="login-email" required autocomplete="username">
+      </label>
+      <label>รหัสผ่าน
+        <input type="password" id="login-password" required autocomplete="current-password">
+      </label>
+      <button type="submit" class="btn primary">เข้าสู่ระบบ</button>
+      <p id="login-msg" class="msg" aria-live="polite"></p>
+    </form>
+  </section>
+
+  <!-- ===== หน้าจัดการข้อมูล ===== -->
+  <main id="admin-view" class="admin" hidden>
+    <div class="toolbar">
+      <nav class="tabs" aria-label="เลือกตาราง">
+        <button class="tab active" data-kind="dorm"><span class="dot dorm"></span>ที่พัก</button>
+        <button class="tab" data-kind="food"><span class="dot food"></span>ร้านอาหาร</button>
+      </nav>
+      <input type="search" id="admin-q" class="search" placeholder="ค้นหาชื่อ">
+      <button id="add-btn" class="btn primary">+ เพิ่มข้อมูล</button>
+    </div>
+    <p id="list-msg" class="msg" aria-live="polite"></p>
+    <div class="table-wrap">
+      <table>
+        <thead id="list-head"></thead>
+        <tbody id="list-body"></tbody>
+      </table>
+    </div>
+  </main>
+
+  <!-- ===== ฟอร์มเพิ่ม/แก้ไข ===== -->
+  <dialog id="editor">
+    <form id="edit-form" method="dialog">
+      <div class="dlg-head">
+        <h2 id="edit-title">เพิ่มข้อมูล</h2>
+        <button type="button" class="btn ghost" id="edit-cancel">ยกเลิก</button>
+      </div>
+
+      <div class="dlg-body">
+        <label class="full">ชื่อ *
+          <input name="name" required>
+        </label>
+
+        <!-- ตำแหน่ง -->
+        <fieldset class="full">
+          <legend>ตำแหน่งบนแผนที่ * <span class="hint">คลิกบนแผนที่ หรือวางพิกัดจาก Google Maps</span></legend>
+          <div id="pick-map"></div>
+          <div class="row3">
+            <label>วางพิกัด
+              <input id="paste-coords" placeholder="17.41245, 102.77780">
+            </label>
+            <label>ละติจูด
+              <input name="lat" type="number" step="any" required>
+            </label>
+            <label>ลองจิจูด
+              <input name="lng" type="number" step="any" required>
+            </label>
+          </div>
+        </fieldset>
+
+        <!-- ช่องเฉพาะที่พัก -->
+        <div class="fields" data-kind="dorm">
+          <label>ประเภทหอ *
+            <select name="type">
+              <option value="ชาย">หอชาย</option>
+              <option value="หญิง">หอหญิง</option>
+              <option value="รวม">หอรวม</option>
+            </select>
+          </label>
+          <label>ค่าห้อง (บาท/เดือน) *
+            <input name="price" type="number" min="0" step="1">
+          </label>
+          <label>ค่าไฟ (บาท/หน่วย)
+            <input name="electric" type="number" min="0" step="0.01">
+          </label>
+          <label>ค่าน้ำ (บาท)
+            <span class="inline">
+              <input name="water" type="number" min="0" step="0.01">
+              <select name="water_unit">
+                <option value="หน่วย">ต่อหน่วย</option>
+                <option value="เดือน">ต่อเดือน (เหมา)</option>
+              </select>
+            </span>
+          </label>
+          <label>ค่ามัดจำ
+            <input name="deposit" placeholder="เช่น 1 เดือน / 1,000 บาท">
+          </label>
+          <label>ห้องว่าง (ห้อง)
+            <input name="vacant" type="number" min="0" step="1" value="0">
+          </label>
+          <label>เวลาปิดหอ
+            <input name="curfew" placeholder="เช่น 22:00 น. / ไม่มี">
+          </label>
+          <label>เบอร์ติดต่อ
+            <input name="phone" type="tel">
+          </label>
+          <fieldset class="full">
+            <legend>สิ่งอำนวยความสะดวก</legend>
+            <div id="facility-checks" class="checks"></div>
+            <label>อื่นๆ (คั่นด้วยจุลภาค ,)
+              <input id="facility-extra" placeholder="เช่น ลิฟต์, ฟิตเนส">
+            </label>
+          </fieldset>
+        </div>
+
+        <!-- ช่องเฉพาะร้านอาหาร -->
+        <div class="fields" data-kind="food">
+          <label>ประเภทอาหาร *
+            <input name="category" list="category-list" placeholder="เช่น อาหารตามสั่ง">
+            <datalist id="category-list">
+              <option value="อาหารตามสั่ง"><option value="ก๋วยเตี๋ยว"><option value="อาหารอีสาน">
+              <option value="ข้าวมันไก่"><option value="เครื่องดื่ม/ของหวาน"><option value="ร้านอาหารทั่วไป">
+            </datalist>
+          </label>
+          <label>ช่วงราคา
+            <input name="price_range" placeholder="เช่น 40–60 บาท">
+          </label>
+          <label>เวลาเปิด-ปิด
+            <input name="open_hours" placeholder="เช่น 07:00–19:00 น.">
+          </label>
+          <label>โปรนักศึกษา
+            <input name="student_deal" placeholder="เว้นว่างได้">
+          </label>
+          <label class="full">เมนูเด่น (บรรทัดละ 1 เมนู ใส่ชื่อ + ราคา)
+            <textarea name="menu" rows="4" placeholder="กะเพราหมูสับ 45&#10;ข้าวผัด 45"></textarea>
+          </label>
+        </div>
+
+        <!-- รูปภาพ -->
+        <fieldset class="full">
+          <legend>รูปภาพ <span class="hint">JPG / PNG / WebP ไม่เกิน 5 MB ต่อรูป</span></legend>
+          <div id="photo-list" class="photos"></div>
+          <input type="file" id="photo-input" accept="image/jpeg,image/png,image/webp" multiple>
+        </fieldset>
+
+        <label>วันที่อัปเดตข้อมูล
+          <input name="updated_at" type="date">
+        </label>
+      </div>
+
+      <div class="dlg-foot">
+        <p id="edit-msg" class="msg" aria-live="polite"></p>
+        <button type="submit" class="btn primary" id="save-btn">บันทึก</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+  <script src="js/supabase-config.js"></script>
+  <script src="js/admin.js"></script>
+</body>
+</html>

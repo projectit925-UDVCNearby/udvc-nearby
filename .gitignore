@@ -1,0 +1,9 @@
+# ไฟล์ของระบบ / โปรแกรมแก้ไขโค้ด
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+
+# ไฟล์ลับ (ห้ามอัปขึ้น GitHub)
+.env
+*.key

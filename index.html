@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>UDVC Nearby | ที่พักและร้านอาหารรอบวิทยาลัย</title>
+
+  <!-- ฟอนต์ภาษาไทย -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Prompt:wght@500;600&family=Sarabun:wght@400;600&display=swap">
+
+  <!-- Leaflet: ไลบรารีแผนที่ -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <!-- ส่วนหัว -->
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo" aria-hidden="true">📍</span>
+      <div>
+        <h1>UDVC Nearby</h1>
+        <p>ที่พักและร้านอาหารรอบวิทยาลัยอาชีวศึกษาอุดรธานี</p>
+      </div>
+    </div>
+    <!-- ปุ่มสลับ รายการ/แผนที่ (แสดงเฉพาะบนมือถือ) -->
+    <button id="toggle-view" class="view-toggle" aria-controls="panel">☰ รายการ</button>
+  </header>
+
+  <div class="content">
+    <!-- แผงค้นหา ตัวกรอง และรายการผลลัพธ์ -->
+    <aside id="panel" class="panel" aria-label="ค้นหาและตัวกรอง">
+      <input type="search" id="q" class="search" placeholder="ค้นหาชื่อหอ ร้าน หรือเมนู" autocomplete="off">
+
+      <!-- ปุ่มเลือกหมวด -->
+      <nav class="filters" aria-label="เลือกหมวด">
+        <button class="chip active" data-filter="all">ทั้งหมด</button>
+        <button class="chip" data-filter="dorm"><span class="dot dorm"></span>ที่พัก</button>
+        <button class="chip" data-filter="food"><span class="dot food"></span>ร้านอาหาร</button>
+      </nav>
+
+      <!-- ตัวกรอง (ช่องที่มี data-for="dorm" ใช้กับที่พักเท่านั้น) -->
+      <div class="filter-grid">
+        <label class="field" data-for="dorm">งบไม่เกิน
+          <select id="budget">
+            <option value="0">ไม่จำกัด</option>
+            <option value="2000">2,000 บาท/เดือน</option>
+            <option value="3000">3,000 บาท/เดือน</option>
+            <option value="4000">4,000 บาท/เดือน</option>
+          </select>
+        </label>
+        <label class="field" data-for="dorm">ประเภทหอ
+          <select id="dorm-type">
+            <option value="">ทั้งหมด</option>
+            <option value="ชาย">หอชาย</option>
+            <option value="หญิง">หอหญิง</option>
+            <option value="รวม">หอรวม</option>
+          </select>
+        </label>
+        <label class="field">ระยะจากวิทยาลัย
+          <select id="max-dist">
+            <option value="0">ไม่จำกัด</option>
+            <option value="500">ไม่เกิน 500 ม.</option>
+            <option value="1000">ไม่เกิน 1 กม.</option>
+          </select>
+        </label>
+        <label class="check" data-for="dorm"><input type="checkbox" id="air"> มีแอร์</label>
+      </div>
+
+      <div class="result-head">
+        <span id="count" aria-live="polite"></span>
+        <button id="reset" class="link-btn">ล้างตัวกรอง</button>
+      </div>
+      <ul id="results" class="results"></ul>
+    </aside>
+
+    <!-- แผนที่ + การ์ดรายละเอียด -->
+    <div class="map-wrap">
+      <main id="map" aria-label="แผนที่"></main>
+      <aside id="card" class="card" hidden>
+        <button id="card-close" class="card-close" aria-label="ปิด">✕</button>
+        <div id="card-body"></div>
+      </aside>
+    </div>
+  </div>
+
+  <footer class="disclaimer">
+    โปรเจกต์นักศึกษา ปวช.3 แผนกเทคโนโลยีสารสนเทศ ไม่ใช่เว็บไซต์ทางการของวิทยาลัย · ข้อมูลตอนนี้เป็นข้อมูลตัวอย่าง (สมมติ) · <a href="admin.html">แอดมิน</a>
+  </footer>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+  <script src="js/supabase-config.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
