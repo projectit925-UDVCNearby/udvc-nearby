@@ -74,6 +74,9 @@
         <label class="full">ชื่อ *
           <input name="name" required>
         </label>
+        <label>เบอร์ติดต่อ
+          <input name="phone" type="tel">
+        </label>
 
         <!-- ตำแหน่ง -->
         <fieldset class="full">
@@ -94,15 +97,16 @@
 
         <!-- ช่องเฉพาะที่พัก -->
         <div class="fields" data-kind="dorm">
-          <label>ประเภทหอ *
+          <label>ประเภทหอ
             <select name="type">
+              <option value="">ยังไม่ทราบ</option>
               <option value="ชาย">หอชาย</option>
               <option value="หญิง">หอหญิง</option>
               <option value="รวม">หอรวม</option>
             </select>
           </label>
-          <label>ค่าห้อง (บาท/เดือน) *
-            <input name="price" type="number" min="0" step="1">
+          <label>ค่าห้อง (บาท/เดือน)
+            <input name="price" type="number" min="0" step="1" placeholder="เว้นว่าง = รอข้อมูล">
           </label>
           <label>ค่าไฟ (บาท/หน่วย)
             <input name="electric" type="number" min="0" step="0.01">
@@ -120,13 +124,10 @@
             <input name="deposit" placeholder="เช่น 1 เดือน / 1,000 บาท">
           </label>
           <label>ห้องว่าง (ห้อง)
-            <input name="vacant" type="number" min="0" step="1" value="0">
+            <input name="vacant" type="number" min="0" step="1" placeholder="เว้นว่าง = ยังไม่ทราบ">
           </label>
           <label>เวลาปิดหอ
             <input name="curfew" placeholder="เช่น 22:00 น. / ไม่มี">
-          </label>
-          <label>เบอร์ติดต่อ
-            <input name="phone" type="tel">
           </label>
           <fieldset class="full">
             <legend>สิ่งอำนวยความสะดวก</legend>
@@ -143,7 +144,8 @@
             <input name="category" list="category-list" placeholder="เช่น อาหารตามสั่ง">
             <datalist id="category-list">
               <option value="อาหารตามสั่ง"><option value="ก๋วยเตี๋ยว"><option value="อาหารอีสาน">
-              <option value="ข้าวมันไก่"><option value="เครื่องดื่ม/ของหวาน"><option value="ร้านอาหารทั่วไป">
+              <option value="ข้าวมันไก่"><option value="ข้าวต้ม"><option value="ปิ้งย่าง/หมูกระทะ">
+              <option value="คาเฟ่/เครื่องดื่ม"><option value="เบเกอรี่/ของหวาน"><option value="ร้านอาหารทั่วไป">
             </datalist>
           </label>
           <label>ช่วงราคา

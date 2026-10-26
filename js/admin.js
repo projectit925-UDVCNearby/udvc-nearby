@@ -15,6 +15,7 @@ let photos = [];            // ลิงก์รูปในฟอร์ม
 let removedPhotos = [];     // รูปที่กดลบในฟอร์ม (ลบจริงตอนกดบันทึก)
 
 const $ = id => document.getElementById(id);
+const WAIT = `<span class="wait">รอข้อมูล</span>`;   // ช่องที่ยังไม่ได้กรอก (เช่น ข้อมูลที่นำเข้าจาก Google Maps)
 
 // กันข้อความแปลกๆ ถูกแปลงเป็น HTML
 function esc(text) {
@@ -120,8 +121,10 @@ function renderRows() {
       ? `<img class="thumb" src="${esc(r.photos[0])}" alt="">`
       : `<span class="thumb"></span>`;
     const cols = currentKind === "dorm"
-      ? `<td>${esc(r.type)}</td><td class="num">${r.price.toLocaleString()} บ.</td><td class="num">${r.vacant}</td>`
-      : `<td>${esc(r.category)}</td><td class="num">${esc(r.price_range)}</td>`;
+      ? `<td>${r.type ? esc(r.type) : WAIT}</td>
+         <td class="num">${r.price != null ? `${r.price.toLocaleString()} บ.` : WAIT}</td>
+         <td class="num">${r.vacant ?? WAIT}</td>`
+      : `<td>${esc(r.category)}</td><td class="num">${r.price_range ? esc(r.price_range) : WAIT}</td>`;
     return `
       <tr>
         <td>${thumb}</td>
@@ -314,7 +317,6 @@ function openEditor(row) {
     div.hidden = !active;
     div.querySelectorAll("input, select, textarea").forEach(el => { el.disabled = !active; });
   });
-  form.price.required = currentKind === "dorm";
   form.category.required = currentKind === "food";
 
   // ใส่ค่าเดิมลงฟอร์ม
@@ -410,6 +412,7 @@ function readForm() {
     name: f.name.value.trim(),
     lat: Number(f.lat.value),
     lng: Number(f.lng.value),
+    phone: f.phone.value.trim() || null,
     photos,
     updated_at: f.updated_at.value || today()
   };
@@ -419,16 +422,15 @@ function readForm() {
     const extra = $("facility-extra").value.split(",").map(s => s.trim()).filter(Boolean);
     return {
       ...common,
-      type: f.type.value,
-      price: Number(f.price.value),
+      type: f.type.value || null,
+      price: numberOrNull(f.price.value),
       electric: numberOrNull(f.electric.value),
       water: numberOrNull(f.water.value),
       water_unit: f.water_unit.value,
       deposit: f.deposit.value.trim() || null,
-      vacant: Number(f.vacant.value || 0),
+      vacant: numberOrNull(f.vacant.value),
       facilities: [...new Set([...checked, ...extra])],
-      curfew: f.curfew.value.trim() || null,
-      phone: f.phone.value.trim() || null
+      curfew: f.curfew.value.trim() || null
     };
   }
 

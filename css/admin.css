@@ -107,6 +107,7 @@ tbody tr:last-child td { border-bottom: 0; }
 td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
 td.actions { white-space: nowrap; text-align: right; }
 td.actions .btn + .btn { margin-left: 6px; }
+.wait { color: var(--muted); font-style: italic; }
 .thumb { width: 44px; height: 44px; border-radius: 6px; object-fit: cover; background: var(--bg); display: block; }
 .empty { text-align: center; color: var(--muted); padding: 28px; }
 

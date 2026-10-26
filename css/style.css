@@ -343,6 +343,8 @@ button, input, select { font: inherit; color: inherit; }
   font-weight: 600;
 }
 .updated { margin-top: 8px; font-size: .8rem; color: var(--muted); text-align: right; }
+.source { margin: 8px 0 0; font-size: .8rem; color: var(--muted); text-align: right; }
+.wait { color: var(--muted); font-style: italic; }
 
 /* ===== ปุ่มในการ์ด: บันทึก / เปรียบเทียบ ===== */
 .muted { color: var(--muted); font-weight: 400; }

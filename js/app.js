@@ -25,8 +25,9 @@ const filters = {
   budget: 0,      // งบสูงสุด (0 = ไม่จำกัด)
   dormType: "",   // ชาย / หญิง / รวม ("" = ทั้งหมด)
   air: false,     // ต้องมีแอร์
-  maxDist: 0      // ระยะสูงสุดเป็นเมตร (0 = ไม่จำกัด)
+  maxDist: 2000   // ระยะสูงสุดเป็นเมตร: 500 / 1000 / 2000
 };
+const DEFAULT_DIST = 2000;
 
 // ===== 2) เก็บข้อมูลในเครื่องผู้ใช้ (localStorage) =====
 // ใช้กับรายการโปรดและค่าที่กรอกในเครื่องคำนวณ ไม่ต้องล็อกอิน
@@ -89,6 +90,22 @@ function thaiDate(iso) {
 
 const baht = n => Math.round(n).toLocaleString();
 
+// ช่องที่ยังไม่มีข้อมูล (เช่น หอที่นำเข้าจาก Google Maps ยังไม่ได้กรอกราคา)
+const WAIT = `<span class="wait">รอข้อมูล</span>`;
+const dormLabel = p => (p.type ? `หอ${esc(p.type)}` : "หอพัก");
+
+function vacantText(p) {
+  if (p.vacant == null) return "";
+  return p.vacant > 0 ? `<span class="vacant-yes">ว่าง ${p.vacant} ห้อง</span>` : `<span class="vacant-no">เต็ม</span>`;
+}
+
+// ภาพจาก Google Maps ต้องให้เครดิต
+function sourceNote(p) {
+  return p.source === "google_maps"
+    ? `<p class="source">ภาพและข้อมูลเบื้องต้นจาก Google Maps</p>`
+    : "";
+}
+
 // ===== 4) รีวิว: คะแนนเฉลี่ย =====
 function rating(p) {
   const list = p.reviews || [];
@@ -105,6 +122,7 @@ function starsText(n) {
 // ===== 5) ค่าใช้จ่ายต่อเดือนโดยประมาณ =====
 // ค่าห้อง + ค่าไฟ (บาท/หน่วย x หน่วยที่ใช้) + ค่าน้ำ (ต่อหน่วย หรือ เหมาจ่าย)
 function monthlyCost(p) {
+  if (p.price == null) return null;
   const elec = (p.electric || 0) * usage.elec;
   const water = p.water_unit === "เดือน" ? (p.water || 0) : (p.water || 0) * usage.water;
   return { room: p.price, elec, water, total: p.price + elec + water };
@@ -182,25 +200,32 @@ function ratingBadge(p) {
 }
 
 function dormCard(p) {
-  const vacant = p.vacant > 0
-    ? `<span class="vacant-yes">ว่าง ${p.vacant} ห้อง</span>`
-    : `<span class="vacant-no">เต็ม</span>`;
+  const vacant = vacantText(p);
   return `
     ${gallery(p)}
     <h2>${esc(p.name)}</h2>
-    <p class="sub">ที่พัก${esc(p.type)} · ${vacant} ${ratingBadge(p)}</p>
+    <p class="sub">${p.type ? `ที่พัก${esc(p.type)}` : "ที่พัก"}${vacant ? ` · ${vacant}` : ""} ${ratingBadge(p)}</p>
     ${cardActions(p)}
     <dl>
-      <dt>ค่าห้อง</dt><dd>${p.price.toLocaleString()} บาท/เดือน</dd>
-      <dt>ค่าไฟ</dt><dd>${p.electric ?? "-"} บาท/หน่วย</dd>
-      <dt>ค่าน้ำ</dt><dd>${p.water ?? "-"} บาท/${esc(p.water_unit)}</dd>
+      <dt>ค่าห้อง</dt><dd>${p.price != null ? `${p.price.toLocaleString()} บาท/เดือน` : WAIT}</dd>
+      <dt>ค่าไฟ</dt><dd>${p.electric != null ? `${p.electric} บาท/หน่วย` : WAIT}</dd>
+      <dt>ค่าน้ำ</dt><dd>${p.water != null ? `${p.water} บาท/${esc(p.water_unit)}` : WAIT}</dd>
       <dt>มัดจำ</dt><dd>${esc(p.deposit || "-")}</dd>
       <dt>ปิดหอ</dt><dd>${esc(p.curfew || "-")}</dd>
       <dt>ระยะจากวิทยาลัย</dt><dd>${distanceText(p.dist)}</dd>
       <dt>โทร</dt><dd>${esc(p.phone || "-")}</dd>
     </dl>
     <div class="tags">${p.facilities.map(f => `<span class="tag">${esc(f)}</span>`).join("")}</div>
+    ${p.price != null ? calcSection(p) : ""}
+    ${reviewSection(p)}
+    <a class="btn-nav" href="${navLink(p.lat, p.lng)}" target="_blank" rel="noopener">นำทางด้วย Google Maps</a>
+    ${sourceNote(p)}
+    <p class="updated">อัปเดตล่าสุด ${thaiDate(p.updated_at)}</p>`;
+}
 
+// เครื่องคำนวณค่าใช้จ่าย (แสดงเฉพาะหอที่มีค่าห้องแล้ว)
+function calcSection(p) {
+  return `
     <section class="calc">
       <h3>ค่าใช้จ่ายต่อเดือนโดยประมาณ</h3>
       <div class="calc-inputs">
@@ -211,28 +236,27 @@ function dormCard(p) {
       </div>
       <p class="calc-total">${costLine(p)}</p>
       <p class="hint">โดยทั่วไป ห้องพัดลมใช้ไฟ 50–80 หน่วย/เดือน ห้องแอร์ 120–200 หน่วย/เดือน</p>
-    </section>
-
-    ${reviewSection(p)}
-    <a class="btn-nav" href="${navLink(p.lat, p.lng)}" target="_blank" rel="noopener">นำทางด้วย Google Maps</a>
-    <p class="updated">อัปเดตล่าสุด ${thaiDate(p.updated_at)}</p>`;
+    </section>`;
 }
 
 function foodCard(p) {
   return `
     ${gallery(p)}
     <h2>${esc(p.name)}</h2>
-    <p class="sub">${esc(p.category)} · ${esc(p.price_range || "")} ${ratingBadge(p)}</p>
+    <p class="sub">${esc(p.category)}${p.price_range ? ` · ${esc(p.price_range)}` : ""} ${ratingBadge(p)}</p>
     ${cardActions(p)}
     <dl>
+      <dt>ช่วงราคา</dt><dd>${p.price_range ? esc(p.price_range) : WAIT}</dd>
       <dt>เวลาเปิด</dt><dd>${esc(p.open_hours || "-")}</dd>
       <dt>ระยะจากวิทยาลัย</dt><dd>${distanceText(p.dist)}</dd>
+      <dt>โทร</dt><dd>${esc(p.phone || "-")}</dd>
     </dl>
-    <strong>เมนูเด่น</strong>
-    <ul>${p.menu.map(m => `<li>${esc(m)} บาท</li>`).join("")}</ul>
+    ${p.menu.length ? `<strong>เมนูเด่น</strong>
+    <ul>${p.menu.map(m => `<li>${esc(m)} บาท</li>`).join("")}</ul>` : ""}
     ${p.student_deal ? `<div class="deal">โปรนักศึกษา: ${esc(p.student_deal)}</div>` : ""}
     ${reviewSection(p)}
     <a class="btn-nav" href="${navLink(p.lat, p.lng)}" target="_blank" rel="noopener">นำทางด้วย Google Maps</a>
+    ${sourceNote(p)}
     <p class="updated">อัปเดตล่าสุด ${thaiDate(p.updated_at)}</p>`;
 }
 
@@ -527,18 +551,18 @@ function renderCompare() {
     return nums.length > 1 ? pick(...nums) : null;
   };
 
-  const costs = dorms.map(d => monthlyCost(d).total);
+  const costs = dorms.map(d => monthlyCost(d)?.total ?? null);
   const ratings = dorms.map(d => (rating(d) ? rating(d).avg : null));
 
   // แต่ละแถว: [หัวข้อ, ค่าที่ใช้เทียบ, ข้อความที่แสดง, ใช้ค่าน้อยสุดหรือมากสุดเป็น "ดีที่สุด"]
   const rows = [
-    ["ประเภท", dorms.map(() => null), dorms.map(d => `หอ${esc(d.type)}`)],
-    ["ค่าห้อง/เดือน", dorms.map(d => d.price), dorms.map(d => `${baht(d.price)} บ.`), Math.min],
-    ["ค่าไฟ/หน่วย", dorms.map(d => d.electric), dorms.map(d => `${d.electric ?? "-"} บ.`), Math.min],
-    ["ค่าน้ำ", dorms.map(() => null), dorms.map(d => `${d.water ?? "-"} บ./${esc(d.water_unit)}`)],
-    ["รวมต่อเดือน (ประมาณ)", costs, costs.map(c => `<b>${baht(c)} บ.</b>`), Math.min],
+    ["ประเภท", dorms.map(() => null), dorms.map(d => dormLabel(d))],
+    ["ค่าห้อง/เดือน", dorms.map(d => d.price), dorms.map(d => (d.price != null ? `${baht(d.price)} บ.` : WAIT)), Math.min],
+    ["ค่าไฟ/หน่วย", dorms.map(d => d.electric), dorms.map(d => (d.electric != null ? `${d.electric} บ.` : WAIT)), Math.min],
+    ["ค่าน้ำ", dorms.map(() => null), dorms.map(d => (d.water != null ? `${d.water} บ./${esc(d.water_unit)}` : WAIT))],
+    ["รวมต่อเดือน (ประมาณ)", costs, costs.map(c => (c != null ? `<b>${baht(c)} บ.</b>` : WAIT)), Math.min],
     ["มัดจำ", dorms.map(() => null), dorms.map(d => esc(d.deposit || "-"))],
-    ["ห้องว่าง", dorms.map(d => d.vacant), dorms.map(d => (d.vacant > 0 ? `${d.vacant} ห้อง` : "เต็ม")), Math.max],
+    ["ห้องว่าง", dorms.map(d => d.vacant), dorms.map(d => (d.vacant == null ? WAIT : d.vacant > 0 ? `${d.vacant} ห้อง` : "เต็ม")), Math.max],
     ["ระยะจากวิทยาลัย", dorms.map(d => d.dist), dorms.map(d => shortDistance(d.dist)), Math.min],
     ["ปิดหอ", dorms.map(() => null), dorms.map(d => esc(d.curfew || "-"))],
     ["คะแนนรีวิว", ratings, dorms.map((d, i) => (ratings[i] ? `★ ${ratings[i].toFixed(1)} (${rating(d).count})` : "ยังไม่มี")), Math.max]
@@ -598,7 +622,9 @@ function matches(p) {
   }
 
   // ตัวกรองเฉพาะที่พัก (ร้านอาหารไม่ถูกกรองด้วยเงื่อนไขเหล่านี้)
+  // หอที่ยังไม่มีค่าห้อง/ประเภท จะไม่ผ่านตัวกรองงบและประเภท เพราะยังไม่รู้ว่าตรงเงื่อนไขไหม
   if (p.kind === "dorm") {
+    if (filters.budget && p.price == null) return false;
     if (filters.budget && p.price > filters.budget) return false;
     if (filters.dormType && p.type !== filters.dormType) return false;
     if (filters.air && !p.facilities.includes("แอร์")) return false;
@@ -630,8 +656,10 @@ function render() {
   shown.forEach(p => {
     const r = rating(p);
     const meta = p.kind === "dorm"
-      ? `หอ${esc(p.type)} · ${p.price.toLocaleString()} บาท/เดือน · ${p.vacant > 0 ? `ว่าง ${p.vacant} ห้อง` : "เต็ม"}`
-      : `${esc(p.category)} · ${esc(p.price_range || "")}`;
+      ? [dormLabel(p),
+         p.price != null ? `${p.price.toLocaleString()} บาท/เดือน` : "ค่าห้อง: รอข้อมูล",
+         p.vacant == null ? "" : p.vacant > 0 ? `ว่าง ${p.vacant} ห้อง` : "เต็ม"].filter(Boolean).join(" · ")
+      : [esc(p.category), esc(p.price_range || "")].filter(Boolean).join(" · ");
 
     const li = document.createElement("li");
     li.innerHTML = `
@@ -658,12 +686,28 @@ function focusPlace(p) {
   p.marker.openTooltip();
 }
 
-// ===== 13) หมุดวิทยาลัย + วงรัศมี 500 ม. และ 1 กม. =====
+// ===== 13) หมุดวิทยาลัย + วงรัศมี 500 ม. 1 กม. และ 2 กม. =====
 L.marker([COLLEGE.lat, COLLEGE.lng], { icon: makeIcon("college") })
   .addTo(map)
   .bindTooltip(COLLEGE.name, { direction: "top", offset: [0, -24] });
-L.circle([COLLEGE.lat, COLLEGE.lng], { radius: 500, color: "#0f5f8c", weight: 1, fillOpacity: 0.04 }).addTo(map);
-L.circle([COLLEGE.lat, COLLEGE.lng], { radius: 1000, color: "#0f5f8c", weight: 1, dashArray: "4 6", fill: false }).addTo(map);
+
+// วงที่ตรงกับระยะที่เลือกจะเป็นเส้นทึบและแรเงา วงอื่นเป็นเส้นประจางๆ
+const rings = [500, 1000, 2000].map(radius =>
+  L.circle([COLLEGE.lat, COLLEGE.lng], { radius, color: "#0f5f8c", weight: 1, interactive: false }).addTo(map));
+
+function updateRings(zoomToFit) {
+  rings.forEach(c => {
+    const on = c.getRadius() === filters.maxDist;
+    c.setStyle(on
+      ? { opacity: 0.9, dashArray: null, fillOpacity: 0.05 }
+      : { opacity: 0.35, dashArray: "4 6", fillOpacity: 0 });
+  });
+  if (zoomToFit) {
+    const ring = rings.find(c => c.getRadius() === filters.maxDist);
+    if (ring) map.flyToBounds(ring.getBounds(), { padding: [20, 20], duration: 0.6 });
+  }
+}
+updateRings(false);
 
 // ===== 14) โหลดข้อมูลจาก Supabase แล้วสร้างหมุด =====
 async function loadPlaces() {
@@ -730,7 +774,11 @@ qInput.addEventListener("input", () => {
 });
 budgetSel.addEventListener("change", () => { filters.budget = Number(budgetSel.value); render(); });
 dormTypeSel.addEventListener("change", () => { filters.dormType = dormTypeSel.value; render(); });
-distSel.addEventListener("change", () => { filters.maxDist = Number(distSel.value); render(); });
+distSel.addEventListener("change", () => {
+  filters.maxDist = Number(distSel.value);
+  updateRings(true);
+  render();
+});
 airChk.addEventListener("change", () => { filters.air = airChk.checked; render(); });
 
 // ปุ่มเลือกหมวด: ทั้งหมด / ที่พัก / ร้านอาหาร / รายการโปรด
@@ -751,9 +799,10 @@ document.getElementById("reset").addEventListener("click", () => {
   qInput.value = "";
   budgetSel.value = "0";
   dormTypeSel.value = "";
-  distSel.value = "0";
+  distSel.value = String(DEFAULT_DIST);
   airChk.checked = false;
-  Object.assign(filters, { q: "", budget: 0, dormType: "", air: false, maxDist: 0 });
+  Object.assign(filters, { q: "", budget: 0, dormType: "", air: false, maxDist: DEFAULT_DIST });
+  updateRings(false);
   setKind("all");
 });
 
