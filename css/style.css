@@ -236,6 +236,160 @@ button, input, select { font: inherit; color: inherit; }
 }
 .updated { margin-top: 8px; font-size: .8rem; color: var(--muted); text-align: right; }
 
+/* ===== ปุ่มในการ์ด: บันทึก / เปรียบเทียบ ===== */
+.muted { color: var(--muted); font-weight: 400; }
+.rating { color: #b77900; font-weight: 600; white-space: nowrap; }
+.card-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 12px; }
+.act {
+  padding: 5px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--sheet);
+  cursor: pointer;
+  font-size: .88rem;
+}
+.act.on { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+.act.fav { background: #fde8ec; border-color: #d23a5a; color: #b0213f; }
+.act:disabled { opacity: .55; cursor: not-allowed; }
+.fav-mark { color: #d23a5a; }
+
+.card h3 { font-family: "Prompt", sans-serif; font-weight: 500; font-size: 1rem; margin: 0 0 8px; }
+.hint { font-size: .8rem; color: var(--muted); margin: 6px 0 0; }
+
+/* ===== เครื่องคำนวณค่าใช้จ่าย ===== */
+.calc {
+  margin-top: 14px;
+  padding: 12px;
+  border-radius: 10px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+}
+.calc-inputs { display: flex; flex-wrap: wrap; gap: 8px 16px; font-size: .9rem; align-items: center; }
+.calc-inputs label { display: inline-flex; align-items: center; gap: 6px; }
+.calc-inputs input {
+  width: 70px;
+  padding: 4px 6px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  text-align: right;
+}
+.calc-total { margin: 8px 0 0; font-size: .92rem; line-height: 1.6; }
+.calc-total b { color: var(--accent); font-size: 1.05rem; }
+
+/* ===== รีวิว ===== */
+.reviews { margin-top: 16px; border-top: 1px solid var(--line); padding-top: 12px; }
+.reviews > p { margin: 0; font-size: .9rem; }
+.review-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
+.review { font-size: .9rem; }
+.review p { margin: 2px 0 0; }
+.review-head { display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: baseline; }
+.review .stars { color: #e0a000; letter-spacing: 1px; }
+.review .who { font-weight: 600; }
+.review .when { color: var(--muted); font-size: .8rem; }
+
+.review-box { margin-top: 10px; }
+.review-box summary { cursor: pointer; color: var(--accent); font-weight: 600; font-size: .92rem; }
+.review-form { display: grid; gap: 8px; margin-top: 8px; }
+.review-form input, .review-form textarea {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--sheet);
+  resize: vertical;
+}
+.btn-send {
+  justify-self: start;
+  padding: 7px 18px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+}
+.btn-send:disabled { opacity: .6; cursor: wait; }
+.form-msg { margin: 0; font-size: .85rem; color: var(--no); min-height: 1em; }
+.form-ok { margin: 6px 0 0; color: var(--ok); font-weight: 600; }
+
+/* เลือกดาว: เรียงจากขวาไปซ้าย เพื่อให้ไฮไลต์ดาวก่อนหน้าได้ด้วย CSS */
+.star-pick {
+  border: 0; margin: 0; padding: 0;
+  display: inline-flex;
+  flex-direction: row-reverse;
+  justify-content: flex-end;
+}
+.star-pick input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.star-pick label { font-size: 1.7rem; color: #cfd6db; cursor: pointer; padding: 0 2px; line-height: 1; }
+.star-pick input:checked ~ label,
+.star-pick label:hover,
+.star-pick label:hover ~ label { color: #f2a900; }
+.star-pick input:focus-visible + label { outline: 2px solid var(--accent); border-radius: 4px; }
+
+/* ===== แถบและตารางเปรียบเทียบหอ ===== */
+.compare-bar {
+  position: absolute;
+  top: 12px; left: 50%;
+  transform: translateX(-50%);
+  z-index: 1001;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px 6px 14px;
+  background: var(--sheet);
+  border-radius: 999px;
+  box-shadow: 0 3px 14px rgba(0,0,0,.2);
+  font-size: .9rem;
+  white-space: nowrap;
+}
+.bar-btn {
+  padding: 4px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--sheet);
+  cursor: pointer;
+  font-size: .85rem;
+}
+.bar-btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+.compare-dialog {
+  width: min(820px, calc(100% - 24px));
+  max-height: calc(100vh - 32px);
+  border: 0;
+  border-radius: 14px;
+  padding: 16px 18px;
+  box-shadow: 0 10px 40px rgba(0,0,0,.25);
+}
+.compare-dialog::backdrop { background: rgba(10, 20, 30, .45); }
+.compare-dialog .dlg-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+.compare-dialog h2 { font-size: 1.15rem; }
+.compare-dialog .card-close { position: static; }
+.compare-wrap { overflow-x: auto; margin-top: 10px; border: 1px solid var(--line); border-radius: 10px; }
+.compare-table { border-collapse: collapse; width: 100%; font-size: .9rem; }
+.compare-table th, .compare-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+.compare-table thead th {
+  background: #e2eef5;
+  font-family: "Prompt", sans-serif;
+  font-weight: 500;
+  min-width: 130px;
+}
+.compare-table tbody th { color: var(--muted); font-weight: 400; white-space: nowrap; }
+.compare-table td { font-variant-numeric: tabular-nums; }
+.compare-table td.best, .best-key { background: #e1f1e7; }
+.compare-table td.best { color: #1e6b41; font-weight: 600; }
+.best-key { display: inline-block; width: 14px; height: 14px; border-radius: 3px; vertical-align: -2px; }
+.compare-table td.yes { color: var(--ok); font-weight: 600; }
+.compare-table td.no { color: #b6c0c7; }
+.compare-table .remove {
+  border: 0; background: none; color: var(--muted);
+  cursor: pointer; margin-left: 4px; padding: 0 4px;
+}
+
 /* ===== ข้อความท้ายหน้า ===== */
 .disclaimer {
   font-size: .75rem;

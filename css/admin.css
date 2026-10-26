@@ -110,6 +110,26 @@ td.actions .btn + .btn { margin-left: 6px; }
 .thumb { width: 44px; height: 44px; border-radius: 6px; object-fit: cover; background: var(--bg); display: block; }
 .empty { text-align: center; color: var(--muted); padding: 28px; }
 
+/* แท็บรีวิว */
+.badge {
+  display: inline-block;
+  min-width: 20px;
+  margin-left: 6px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--no);
+  color: #fff;
+  font-size: .78rem;
+  text-align: center;
+}
+tr.pending { background: #fff8e6; }
+.status { font-size: .82rem; padding: 2px 8px; border-radius: 6px; white-space: nowrap; }
+.status.ok { background: #e1f1e7; color: var(--ok); }
+.status.wait { background: #fdecc8; color: #8a5a00; }
+td.stars { color: #e0a000; letter-spacing: 1px; }
+td.stars .dim { color: #d7dde1; }
+td.comment { min-width: 220px; max-width: 420px; line-height: 1.5; }
+
 /* ฟอร์ม (dialog) */
 dialog {
   width: min(760px, calc(100% - 24px));

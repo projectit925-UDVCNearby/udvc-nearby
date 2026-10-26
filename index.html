@@ -38,6 +38,7 @@
         <button class="chip active" data-filter="all">ทั้งหมด</button>
         <button class="chip" data-filter="dorm"><span class="dot dorm"></span>ที่พัก</button>
         <button class="chip" data-filter="food"><span class="dot food"></span>ร้านอาหาร</button>
+        <button class="chip" data-filter="fav">♥ โปรด<span id="fav-count"></span></button>
       </nav>
 
       <!-- ตัวกรอง (ช่องที่มี data-for="dorm" ใช้กับที่พักเท่านั้น) -->
@@ -78,12 +79,34 @@
     <!-- แผนที่ + การ์ดรายละเอียด -->
     <div class="map-wrap">
       <main id="map" aria-label="แผนที่"></main>
+
+      <!-- แถบเปรียบเทียบหอ (แสดงเมื่อเลือกหออย่างน้อย 1 แห่ง) -->
+      <div id="compare-bar" class="compare-bar" hidden>
+        <span id="compare-count"></span>
+        <button id="compare-open" class="bar-btn primary">ดูตาราง</button>
+        <button id="compare-clear" class="bar-btn">ล้าง</button>
+      </div>
+
       <aside id="card" class="card" hidden>
         <button id="card-close" class="card-close" aria-label="ปิด">✕</button>
         <div id="card-body"></div>
       </aside>
     </div>
   </div>
+
+  <!-- ตารางเปรียบเทียบหอ -->
+  <dialog id="compare-dialog" class="compare-dialog" aria-labelledby="compare-title">
+    <div class="dlg-head">
+      <h2 id="compare-title">เปรียบเทียบหอพัก</h2>
+      <button id="compare-close" class="card-close" aria-label="ปิด">✕</button>
+    </div>
+    <p id="compare-hint" class="hint">เลือกหออีก 1–2 แห่ง (กด "⇄ เปรียบเทียบ" ในการ์ด) เพื่อเทียบกัน</p>
+    <div class="compare-wrap">
+      <table id="compare-table" class="compare-table"></table>
+    </div>
+    <p id="compare-usage" class="hint"></p>
+    <p class="hint"><span class="best-key"></span> = ดีที่สุดในแถวนั้น</p>
+  </dialog>
 
   <footer class="disclaimer">
     โปรเจกต์นักศึกษา ปวช.3 แผนกเทคโนโลยีสารสนเทศ ไม่ใช่เว็บไซต์ทางการของวิทยาลัย · ข้อมูลตอนนี้เป็นข้อมูลตัวอย่าง (สมมติ) · <a href="admin.html">แอดมิน</a>

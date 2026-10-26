@@ -83,10 +83,12 @@ async function showView() {
   $("admin-view").hidden = false;
   $("logout").hidden = false;
   await loadRows();
+  updatePendingCount();
 }
 
 // ===== 2) โหลดและแสดงตาราง =====
 async function loadRows() {
+  if (currentKind === "review") return loadReviews();
   setMsg($("list-msg"), "กำลังโหลด...");
   const { data, error } = await db.from(TABLES[currentKind]).select("*").order("name");
   if (error) {
@@ -99,6 +101,7 @@ async function loadRows() {
 }
 
 function renderRows() {
+  if (currentKind === "review") return renderReviews();
   const q = $("admin-q").value.trim().toLowerCase();
   const shown = rows.filter(r => r.name.toLowerCase().includes(q));
 
@@ -141,17 +144,100 @@ document.querySelectorAll(".tab").forEach(tab => {
     currentKind = tab.dataset.kind;
     document.querySelectorAll(".tab").forEach(t => t.classList.toggle("active", t === tab));
     $("admin-q").value = "";
+    // แท็บรีวิว: ไม่มีปุ่มเพิ่มข้อมูล (รีวิวมาจากผู้ใช้)
+    $("add-btn").hidden = currentKind === "review";
+    $("admin-q").placeholder = currentKind === "review" ? "ค้นหาชื่อสถานที่ / ผู้รีวิว / ข้อความ" : "ค้นหาชื่อ";
     loadRows();
   });
 });
 
-// ปุ่มแก้ไข / ลบ ในตาราง
+// ปุ่มในตาราง: แก้ไข / ลบ / อนุมัติรีวิว / ซ่อนรีวิว / ลบรีวิว
 $("list-body").addEventListener("click", e => {
-  const editId = e.target.dataset.edit;
-  const deleteId = e.target.dataset.delete;
-  if (editId) openEditor(rows.find(r => r.id === Number(editId)));
-  if (deleteId) deleteRow(rows.find(r => r.id === Number(deleteId)));
+  const d = e.target.dataset;
+  const find = id => rows.find(r => r.id === Number(id));
+  if (d.edit) openEditor(find(d.edit));
+  if (d.delete) deleteRow(find(d.delete));
+  if (d.approve) setApproved(find(d.approve), true);
+  if (d.hide) setApproved(find(d.hide), false);
+  if (d.deleteReview) deleteReview(find(d.deleteReview));
 });
+
+// ===== รีวิว: ตรวจ อนุมัติ ซ่อน ลบ =====
+async function loadReviews() {
+  setMsg($("list-msg"), "กำลังโหลด...");
+  // ดึงชื่อที่พัก/ร้านมาด้วย (เชื่อมผ่าน foreign key)
+  const { data, error } = await db.from("reviews")
+    .select("*, dorms(name), restaurants(name)")
+    .order("approved")                              // รอตรวจขึ้นก่อน
+    .order("created_at", { ascending: false });     // ใหม่สุดก่อน
+  if (error) {
+    setMsg($("list-msg"), "โหลดรีวิวไม่สำเร็จ: " + error.message, "error");
+    return;
+  }
+  rows = data;
+  setMsg($("list-msg"), "");
+  renderReviews();
+  updatePendingCount();
+}
+
+function renderReviews() {
+  const q = $("admin-q").value.trim().toLowerCase();
+  const placeName = r => (r.dorms ? r.dorms.name : r.restaurants?.name) || "-";
+  const shown = rows.filter(r =>
+    [placeName(r), r.author_name, r.comment].join(" ").toLowerCase().includes(q));
+
+  $("list-head").innerHTML =
+    `<tr><th>สถานะ</th><th>สถานที่</th><th>ดาว</th><th>รีวิว</th><th class="col-hide">วันที่</th><th></th></tr>`;
+
+  if (shown.length === 0) {
+    $("list-body").innerHTML = `<tr><td colspan="6" class="empty">ยังไม่มีรีวิว</td></tr>`;
+    return;
+  }
+
+  $("list-body").innerHTML = shown.map(r => `
+    <tr class="${r.approved ? "" : "pending"}">
+      <td>${r.approved ? `<span class="status ok">แสดงอยู่</span>` : `<span class="status wait">รอตรวจ</span>`}</td>
+      <td>${r.dorms ? "🏠" : "🍜"} ${esc(placeName(r))}</td>
+      <td class="num stars">${"★".repeat(r.stars)}<span class="dim">${"★".repeat(5 - r.stars)}</span></td>
+      <td class="comment"><b>${esc(r.author_name)}</b><br>${esc(r.comment)}</td>
+      <td class="num col-hide">${thaiDate(r.created_at.slice(0, 10))}</td>
+      <td class="actions">
+        ${r.approved
+          ? `<button class="btn small" data-hide="${r.id}">ซ่อน</button>`
+          : `<button class="btn small primary" data-approve="${r.id}">อนุมัติ</button>`}
+        <button class="btn small danger" data-delete-review="${r.id}">ลบ</button>
+      </td>
+    </tr>`).join("");
+}
+
+async function setApproved(review, approved) {
+  const { error } = await db.from("reviews").update({ approved }).eq("id", review.id);
+  if (error) {
+    setMsg($("list-msg"), "บันทึกไม่สำเร็จ: " + error.message, "error");
+    return;
+  }
+  setMsg($("list-msg"), approved ? "อนุมัติรีวิวแล้ว แสดงบนหน้าเว็บ" : "ซ่อนรีวิวแล้ว", "ok");
+  await loadReviews();
+}
+
+async function deleteReview(review) {
+  if (!confirm(`ลบรีวิวของ "${review.author_name}" ใช่ไหม?\nลบแล้วกู้คืนไม่ได้`)) return;
+  const { error } = await db.from("reviews").delete().eq("id", review.id);
+  if (error) {
+    setMsg($("list-msg"), "ลบไม่สำเร็จ: " + error.message, "error");
+    return;
+  }
+  setMsg($("list-msg"), "ลบรีวิวแล้ว", "ok");
+  await loadReviews();
+}
+
+// จำนวนรีวิวที่รอตรวจ แสดงเป็นตัวเลขบนแท็บ
+async function updatePendingCount() {
+  const { count } = await db.from("reviews").select("id", { count: "exact", head: true }).eq("approved", false);
+  const badge = $("pending-count");
+  badge.hidden = !count;
+  badge.textContent = count || "";
+}
 
 // ===== 3) ลบข้อมูล =====
 async function deleteRow(row) {
