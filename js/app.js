@@ -179,12 +179,13 @@ function render() {
 // กดรายการแล้วเลื่อนแผนที่ไปที่สถานที่นั้นและเปิดการ์ด
 function focusPlace(p) {
   setPanelOpen(false); // บนมือถือ ปิดแผงเพื่อให้เห็นแผนที่
+  showCard(p);
+  map.invalidateSize(); // กันกรณีเปิดหน้าเว็บในแท็บเบื้องหลัง แผนที่ยังไม่รู้ขนาดจริง
   // เลื่อนจุดกึ่งกลางลงล่างเล็กน้อย ให้หมุดอยู่ช่วงบนของจอ ไม่โดนการ์ดบัง
   const zoom = 17;
   const shifted = map.project([p.lat, p.lng], zoom).add([0, map.getSize().y * 0.25]);
   map.flyTo(map.unproject(shifted, zoom), zoom, { duration: 0.6 });
   p.marker.openTooltip();
-  showCard(p);
 }
 
 // 8) หมุดวิทยาลัย + วงรัศมี 500 ม. และ 1 กม.
