@@ -58,14 +58,30 @@ function esc(text) {
     ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 }
 
-function makeIcon(kind) {
+// หมุดแต่ละประเภทมีรูปทรงและสัญลักษณ์ต่างกัน (คนตาบอดสีก็แยกได้)
+// ที่พัก = หยดน้ำ + เตียง, ร้านอาหาร = กล่องโค้งมีหาง + ช้อนส้อม, วิทยาลัย = หกเหลี่ยม + หมวก
+const PIN = {
+  dorm:    { w: 32, h: 40, shape: `<path class="shape" d="M16 39s14-12.9 14-24A14 14 0 0 0 2 15c0 11.1 14 24 14 24z"/>`, glyph: "i-bed", gx: 7, gy: 6, gs: 18 },
+  food:    { w: 32, h: 40, shape: `<path class="shape" d="M8 1h16a7 7 0 0 1 7 7v16a7 7 0 0 1-7 7h-4l-4 8-4-8H8a7 7 0 0 1-7-7V8a7 7 0 0 1 7-7z"/>`, glyph: "i-food", gx: 7, gy: 7, gs: 18 },
+  college: { w: 42, h: 46, shape: `<path class="shape" d="M21 1l19 10.5v21L21 43 2 32.5v-21z"/>`, glyph: "i-cap", gx: 9, gy: 10, gs: 24 }
+};
+
+function makeIcon(kind, delay = 0) {
+  const p = PIN[kind];
   return L.divIcon({
     className: "",
-    html: `<div class="pin ${kind}"></div>`,
-    iconSize: [26, 26],
-    iconAnchor: [13, 26]
+    html: `<div class="pin ${kind}" style="--d:${delay}ms">
+      <svg viewBox="0 0 ${p.w} ${p.h}" aria-hidden="true">${p.shape}
+        <svg class="glyph" x="${p.gx}" y="${p.gy}" width="${p.gs}" height="${p.gs}" viewBox="0 0 24 24"><use href="#${p.glyph}"/></svg>
+      </svg></div>`,
+    iconSize: [p.w, p.h],
+    iconAnchor: [p.w / 2, p.h - 1],
+    tooltipAnchor: [0, -p.h + 4]
   });
 }
+
+// ไอคอนในข้อความ เช่น icon("bed")
+const icon = name => `<svg class="ico" aria-hidden="true"><use href="#i-${name}"/></svg>`;
 
 // ระยะทางและเวลาเดินโดยประมาณ (เดิน 80 เมตร/นาที)
 function distanceText(meters) {
@@ -96,7 +112,7 @@ const dormLabel = p => (p.type ? `หอ${esc(p.type)}` : "หอพัก");
 
 function vacantText(p) {
   if (p.vacant == null) return "";
-  return p.vacant > 0 ? `<span class="vacant-yes">ว่าง ${p.vacant} ห้อง</span>` : `<span class="vacant-no">เต็ม</span>`;
+  return p.vacant > 0 ? `<span class="pill ok">${icon("check")}ว่าง ${p.vacant} ห้อง</span>` : `<span class="pill no">เต็ม</span>`;
 }
 
 // ภาพจาก Google Maps ต้องให้เครดิต
@@ -185,11 +201,11 @@ function cardActions(p) {
     const inCompare = compareIds.includes(p.id);
     const full = !inCompare && compareIds.length >= MAX_COMPARE;
     compareBtn = `<button class="act ${inCompare ? "on" : ""}" data-action="compare" ${full ? "disabled" : ""}>
-      ${inCompare ? "✓ อยู่ในตารางเทียบ" : full ? `เทียบได้สูงสุด ${MAX_COMPARE} หอ` : "⇄ เปรียบเทียบ"}</button>`;
+      ${inCompare ? `${icon("check")}อยู่ในตารางเทียบ` : full ? `เทียบได้สูงสุด ${MAX_COMPARE} หอ` : `${icon("compare")}เปรียบเทียบ`}</button>`;
   }
   return `<div class="card-actions">
       <button class="act ${isFav ? "on fav" : ""}" data-action="fav" aria-pressed="${isFav}">
-        ${isFav ? "♥ บันทึกแล้ว" : "♡ บันทึก"}</button>
+        ${icon("heart")}${isFav ? "บันทึกแล้ว" : "บันทึก"}</button>
       ${compareBtn}
     </div>`;
 }
@@ -205,6 +221,7 @@ function dormCard(p) {
     ${gallery(p)}
     <h2>${esc(p.name)}</h2>
     <p class="sub">${p.type ? `ที่พัก${esc(p.type)}` : "ที่พัก"}${vacant ? ` · ${vacant}` : ""} ${ratingBadge(p)}</p>
+    <p class="price-big">${p.price != null ? `<b>${baht(p.price)}</b> บาท/เดือน` : `ค่าห้อง ${WAIT}`}</p>
     ${cardActions(p)}
     <dl>
       <dt>ค่าห้อง</dt><dd>${p.price != null ? `${p.price.toLocaleString()} บาท/เดือน` : WAIT}</dd>
@@ -218,7 +235,7 @@ function dormCard(p) {
     <div class="tags">${p.facilities.map(f => `<span class="tag">${esc(f)}</span>`).join("")}</div>
     ${p.price != null ? calcSection(p) : ""}
     ${reviewSection(p)}
-    <a class="btn-nav" href="${navLink(p.lat, p.lng)}" target="_blank" rel="noopener">นำทางด้วย Google Maps</a>
+    <a class="btn-nav btn-primary" href="${navLink(p.lat, p.lng)}" target="_blank" rel="noopener">${icon("nav")}นำทางด้วย Google Maps</a>
     ${sourceNote(p)}
     <p class="updated">อัปเดตล่าสุด ${thaiDate(p.updated_at)}</p>`;
 }
@@ -227,7 +244,7 @@ function dormCard(p) {
 function calcSection(p) {
   return `
     <section class="calc">
-      <h3>ค่าใช้จ่ายต่อเดือนโดยประมาณ</h3>
+      <h3>มาดูกันว่าเดือนหนึ่งต้องเตรียมเงินเท่าไหร่</h3>
       <div class="calc-inputs">
         <label>ใช้ไฟ <input type="number" min="0" step="1" inputmode="numeric" data-usage="elec" value="${usage.elec}"> หน่วย</label>
         ${p.water_unit === "หน่วย"
@@ -253,9 +270,9 @@ function foodCard(p) {
     </dl>
     ${p.menu.length ? `<strong>เมนูเด่น</strong>
     <ul>${p.menu.map(m => `<li>${esc(m)} บาท</li>`).join("")}</ul>` : ""}
-    ${p.student_deal ? `<div class="deal">โปรนักศึกษา: ${esc(p.student_deal)}</div>` : ""}
+    ${p.student_deal ? `<div class="deal"><b>โปรนักศึกษา:</b> ${esc(p.student_deal)}</div>` : ""}
     ${reviewSection(p)}
-    <a class="btn-nav" href="${navLink(p.lat, p.lng)}" target="_blank" rel="noopener">นำทางด้วย Google Maps</a>
+    <a class="btn-nav btn-primary" href="${navLink(p.lat, p.lng)}" target="_blank" rel="noopener">${icon("nav")}นำทางด้วย Google Maps</a>
     ${sourceNote(p)}
     <p class="updated">อัปเดตล่าสุด ${thaiDate(p.updated_at)}</p>`;
 }
@@ -301,8 +318,15 @@ function reviewSection(p) {
 const card = document.getElementById("card");
 const cardBody = document.getElementById("card-body");
 
+// ไฮไลต์หมุดของสถานที่ที่เปิดการ์ดอยู่ (ขยาย 1.1 เท่า)
+function markSelected(p) {
+  document.querySelectorAll(".pin.selected").forEach(el => el.classList.remove("selected"));
+  p?.marker.getElement()?.querySelector(".pin")?.classList.add("selected");
+}
+
 function showCard(p) {
   currentPlace = p;
+  markSelected(p);
   cardBody.innerHTML = p.kind === "dorm" ? dormCard(p) : foodCard(p);
   card.hidden = false;
   card.scrollTop = 0;
@@ -325,6 +349,7 @@ function refreshCard() {
 }
 
 function closeCard() {
+  markSelected(null);
   card.hidden = true;
   currentPlace = null;
 }
@@ -515,11 +540,27 @@ async function submitReview(form, p) {
 // ===== 9) รายการโปรด =====
 function toggleFav(p) {
   const key = keyOf(p);
-  if (favs.has(key)) favs.delete(key);
-  else favs.add(key);
+  const adding = !favs.has(key);
+  if (adding) favs.add(key);
+  else favs.delete(key);
   save("udvc-favs", [...favs]);
   refreshCard();
   render();
+  if (adding) cardBody.querySelector('[data-action="fav"]')?.classList.add("pop");
+  toast(adding ? "เก็บไว้ให้แล้ว กลับมาดูเมื่อไหร่ก็ได้" : "เอาออกจากรายการโปรดแล้ว");
+}
+
+// ข้อความแจ้งเตือนสั้นๆ ด้านล่างจอ
+const toastEl = document.getElementById("toast");
+let toastTimer;
+function toast(message) {
+  toastEl.textContent = message;
+  toastEl.hidden = false;
+  toastEl.style.animation = "none";
+  toastEl.offsetHeight; // เริ่มแอนิเมชันใหม่
+  toastEl.style.animation = "";
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { toastEl.hidden = true; }, 2200);
 }
 
 // ===== 10) เปรียบเทียบหอ =====
@@ -636,6 +677,24 @@ function matches(p) {
 const resultsEl = document.getElementById("results");
 const countEl = document.getElementById("count");
 
+// หน้าว่าง/ผิดพลาด พร้อมภาพมาสคอต (ถ้ายังไม่มีไฟล์ภาพ ภาพจะถูกซ่อน)
+function emptyState(img, title, text, button = "") {
+  return `<li class="empty">
+    <img src="img/brand/${img}.png" alt="" onerror="this.remove()">
+    <b>${title}</b><span>${text}</span>${button}</li>`;
+}
+
+function showLoading() {
+  countEl.textContent = "กำลังสำรวจรอบวิทยาลัยให้คุณอยู่...";
+  resultsEl.innerHTML = `<li class="loading-cat" aria-hidden="true"><img src="img/brand/cat-search.png" alt="" onerror="this.parentNode.remove()"></li>` + Array.from({ length: 4 }, () => `<li class="skeleton" aria-hidden="true"><i></i><i></i><i></i></li>`).join("");
+}
+
+resultsEl.addEventListener("click", e => {
+  const action = e.target.closest("[data-empty]")?.dataset.empty;
+  if (action === "reset") document.getElementById("reset").click();
+  if (action === "retry") loadPlaces();
+});
+
 function render() {
   const shown = places.filter(matches).sort((a, b) => a.dist - b.dist);
 
@@ -648,8 +707,9 @@ function render() {
 
   if (shown.length === 0) {
     resultsEl.innerHTML = filters.kind === "fav" && favs.size === 0
-      ? `<li class="empty">ยังไม่มีรายการโปรด<br>เปิดการ์ดแล้วกด "♡ บันทึก" เพื่อเก็บไว้ดูทีหลัง</li>`
-      : `<li class="empty">ไม่พบสถานที่ที่ตรงกับเงื่อนไข<br>ลองล้างตัวกรองหรือเปลี่ยนคำค้นหา</li>`;
+      ? emptyState("cat-heart", "ยังไม่มีรายการโปรด", "เปิดการ์ดแล้วกด \"บันทึก\" เพื่อเก็บไว้ดูทีหลัง")
+      : emptyState("cat-sleep", "ยังไม่เจอที่ตรงใจ", "ลองปรับงบประมาณ หรือขยายระยะค้นหาอีกนิดนะ",
+          `<button class="btn-primary" data-empty="reset">ล้างตัวกรอง</button>`);
     return;
   }
 
@@ -657,14 +717,14 @@ function render() {
     const r = rating(p);
     const meta = p.kind === "dorm"
       ? [dormLabel(p),
-         p.price != null ? `${p.price.toLocaleString()} บาท/เดือน` : "ค่าห้อง: รอข้อมูล",
-         p.vacant == null ? "" : p.vacant > 0 ? `ว่าง ${p.vacant} ห้อง` : "เต็ม"].filter(Boolean).join(" · ")
+         p.price != null ? `<span class="price num">${baht(p.price)} บ./เดือน</span>` : "ค่าห้อง: รอข้อมูล",
+         vacantText(p)].filter(Boolean).join(" · ")
       : [esc(p.category), esc(p.price_range || "")].filter(Boolean).join(" · ");
 
     const li = document.createElement("li");
     li.innerHTML = `
       <button class="result">
-        <span class="dot ${p.kind}"></span>
+        <span class="kind-badge ${p.kind}">${icon(p.kind === "dorm" ? "bed" : "food")}</span>
         <span class="name">${esc(p.name)}${favs.has(keyOf(p)) ? ` <span class="fav-mark" aria-label="รายการโปรด">♥</span>` : ""}</span>
         <span class="dist">${shortDistance(p.dist)}</span>
         <span class="meta">${meta}${r ? ` · <span class="rating">★ ${r.avg.toFixed(1)}</span>` : ""}</span>
@@ -689,18 +749,22 @@ function focusPlace(p) {
 // ===== 13) หมุดวิทยาลัย + วงรัศมี 500 ม. 1 กม. และ 2 กม. =====
 L.marker([COLLEGE.lat, COLLEGE.lng], { icon: makeIcon("college") })
   .addTo(map)
-  .bindTooltip(COLLEGE.name, { direction: "top", offset: [0, -24] });
+  .bindTooltip(COLLEGE.name, { direction: "top" });
 
 // วงที่ตรงกับระยะที่เลือกจะเป็นเส้นทึบและแรเงา วงอื่นเป็นเส้นประจางๆ
 const rings = [500, 1000, 2000].map(radius =>
-  L.circle([COLLEGE.lat, COLLEGE.lng], { radius, color: "#0f5f8c", weight: 1, interactive: false }).addTo(map));
+  L.circle([COLLEGE.lat, COLLEGE.lng], { radius, weight: 1.5, interactive: false }).addTo(map));
+
+// สีวงรัศมีอ่านจาก CSS variable เพื่อให้เปลี่ยนตามโหมดสว่าง/มืด
+const cssVar = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 
 function updateRings(zoomToFit) {
   rings.forEach(c => {
     const on = c.getRadius() === filters.maxDist;
+    const color = cssVar("--secondary");
     c.setStyle(on
-      ? { opacity: 0.9, dashArray: null, fillOpacity: 0.05 }
-      : { opacity: 0.35, dashArray: "4 6", fillOpacity: 0 });
+      ? { color, fillColor: color, opacity: 0.9, dashArray: "6 6", fillOpacity: 0.07 }
+      : { color, opacity: 0.4, dashArray: "3 7", fillOpacity: 0 });
   });
   if (zoomToFit) {
     const ring = rings.find(c => c.getRadius() === filters.maxDist);
@@ -711,7 +775,7 @@ updateRings(false);
 
 // ===== 14) โหลดข้อมูลจาก Supabase แล้วสร้างหมุด =====
 async function loadPlaces() {
-  countEl.textContent = "กำลังโหลดข้อมูล...";
+  showLoading();
 
   const [dormsRes, foodRes, reviewsRes] = await Promise.all([
     db.from("dorms").select("*"),
@@ -725,7 +789,8 @@ async function loadPlaces() {
   if (dormsRes.error || foodRes.error) {
     console.error(dormsRes.error || foodRes.error);
     countEl.textContent = "";
-    resultsEl.innerHTML = `<li class="empty">โหลดข้อมูลไม่สำเร็จ<br>ตรวจการเชื่อมต่ออินเทอร์เน็ตแล้วลองรีเฟรชหน้าเว็บ</li>`;
+    resultsEl.innerHTML = emptyState("cat-oops", "อุ๊ปส์! โหลดข้อมูลไม่สำเร็จ", "ตรวจอินเทอร์เน็ตแล้วลองอีกครั้งได้เลย",
+      `<button class="btn-primary" data-empty="retry">ลองอีกครั้ง</button>`);
     return;
   }
 
@@ -744,8 +809,9 @@ async function loadPlaces() {
   places = all.map(p => {
     p.dist = map.distance([COLLEGE.lat, COLLEGE.lng], [p.lat, p.lng]);
     p.reviews = reviewsByPlace[keyOf(p)] || [];
-    p.marker = L.marker([p.lat, p.lng], { icon: makeIcon(p.kind) })
-      .bindTooltip(p.name, { direction: "top", offset: [0, -24] })
+    // หมุดเด้งลงตามระยะ ใกล้ก่อนไกล (เฉพาะตอนเปิดเว็บครั้งแรก)
+    p.marker = L.marker([p.lat, p.lng], { icon: makeIcon(p.kind, Math.round(p.dist / 2000 * 700)) })
+      .bindTooltip(p.name, { direction: "top" })
       .on("click", () => showCard(p));
     return p;
   });
@@ -756,6 +822,7 @@ async function loadPlaces() {
   save("udvc-favs", [...favs]);
 
   render();
+  setTimeout(() => document.body.classList.remove("first-load"), 1400);
 }
 
 loadPlaces();
@@ -812,7 +879,26 @@ const toggleBtn = document.getElementById("toggle-view");
 
 function setPanelOpen(open) {
   panel.classList.toggle("open", open);
-  toggleBtn.textContent = open ? "🗺 แผนที่" : "☰ รายการ";
+  toggleBtn.innerHTML = open ? `${icon("map")}แผนที่` : `${icon("list")}รายการ`;
   toggleBtn.setAttribute("aria-expanded", open);
 }
 toggleBtn.addEventListener("click", () => setPanelOpen(!panel.classList.contains("open")));
+
+// ===== 17) สลับโหมดสว่าง/มืด (จำค่าที่เลือกไว้ในเครื่อง) =====
+const themeBtn = document.getElementById("theme-toggle");
+const darkQuery = window.matchMedia("(prefers-color-scheme: dark)");
+const isDark = () => (document.documentElement.dataset.theme || (darkQuery.matches ? "dark" : "light")) === "dark";
+
+function syncTheme() {
+  themeBtn.innerHTML = icon(isDark() ? "sun" : "moon");
+  themeBtn.setAttribute("aria-label", isDark() ? "เปลี่ยนเป็นโหมดสว่าง" : "เปลี่ยนเป็นโหมดมืด");
+  updateRings(false);
+}
+themeBtn.addEventListener("click", () => {
+  const next = isDark() ? "light" : "dark";
+  document.documentElement.dataset.theme = next;
+  try { localStorage.setItem("udvc-theme", next); } catch { /* ไม่เป็นไร */ }
+  syncTheme();
+});
+darkQuery.addEventListener("change", syncTheme);
+syncTheme();

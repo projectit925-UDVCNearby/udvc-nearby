@@ -1,16 +1,16 @@
 /* ===== หน้าแอดมิน (ใช้สีเดียวกับหน้าหลัก) ===== */
 :root {
-  --bg: #f5f7f8;
+  --bg: #F7F9FC;
   --sheet: #ffffff;
-  --ink: #18242e;
-  --muted: #5b6b77;
-  --line: #d9e0e4;
-  --accent: #0f5f8c;
-  --accent-soft: #e2eef5;
-  --dorm: #1f6fb2;
-  --food: #d9631e;
-  --ok: #2f8a57;
-  --no: #b3261e;
+  --ink: #172B3A;
+  --muted: #526577;
+  --line: #DCE5ED;
+  --accent: #155E75;
+  --accent-soft: #EAF4F7;
+  --dorm: #2563A6;
+  --food: #C4511B;
+  --ok: #166534;
+  --no: #B42318;
 }
 
 * { box-sizing: border-box; }

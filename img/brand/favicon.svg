@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+  <!-- UDVC Nearby: หมุดแผนที่ + ดวงอาทิตย์อีสาน + บ้าน + เส้นทางสีส้ม -->
+  <defs>
+    <linearGradient id="pin" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2C8BA8"/>
+      <stop offset="1" stop-color="#155E75"/>
+    </linearGradient>
+    <linearGradient id="sun" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#F08A3C"/>
+      <stop offset="1" stop-color="#D9631E"/>
+    </linearGradient>
+  </defs>
+  <!-- หมุด -->
+  <path d="M24 45.5S38.5 31.6 38.5 18.5a14.5 14.5 0 1 0-29 0C9.5 31.6 24 45.5 24 45.5z" fill="url(#pin)"/>
+  <!-- ดวงอาทิตย์ -->
+  <circle cx="24" cy="18.5" r="10.3" fill="url(#sun)"/>
+  <!-- กาแลบนยอดหลังคา (ปลายโค้งออก) -->
+  <!-- ตัวบ้าน -->
+  <path d="M24 12.4 31.6 19.2h-2.2v5.9H18.6v-5.9h-2.2z" fill="#fff" stroke="#fff" stroke-width="1.1" stroke-linejoin="round"/>
+  <rect x="22.3" y="20.4" width="3.4" height="4.7" rx="1" fill="#155E75"/>
+  <!-- เส้นทาง: ตัดผ่านปลายหมุด มีขอบขาวแยกจากหมุด -->
+  <path d="M3.5 42.6C11.5 37.4 31 34.4 44.5 39.6 31.5 37.6 15 39.4 3.5 42.6z" fill="#D9631E" stroke="#fff" stroke-width="1.4" stroke-linejoin="round" paint-order="stroke"/>
+</svg>
