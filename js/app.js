@@ -5,15 +5,31 @@
 // (ค่า db และ COLLEGE มาจากไฟล์ js/supabase-config.js)
 
 // 1) สร้างแผนที่ ตรงกลางที่วิทยาลัย
-const map = L.map("map").setView([COLLEGE.lat, COLLEGE.lng], 16);
+const map = L.map("map", { maxZoom: 19 }).setView([COLLEGE.lat, COLLEGE.lng], 16);
 
 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
   maxZoom: 19,
   attribution: "&copy; ผู้ร่วมพัฒนา OpenStreetMap"
 }).addTo(map);
 
-// กลุ่มหมุดที่ผ่านตัวกรอง (ล้างแล้วใส่ใหม่ทุกครั้งที่ตัวกรองเปลี่ยน)
-const markerLayer = L.layerGroup().addTo(map);
+// กลุ่มหมุดที่ผ่านตัวกรอง หมุดที่อยู่ใกล้กันจะรวมเป็นวงกลมบอกจำนวน (ลดจำนวนหมุดบนจอ มือถือจะได้ไม่หน่วง)
+// ซูมถึงระดับ 17 ขึ้นไปจะแยกเป็นหมุดเดี่ยวทั้งหมด
+const markerLayer = L.markerClusterGroup({
+  disableClusteringAtZoom: 17,
+  maxClusterRadius: 48,
+  showCoverageOnHover: false,
+  spiderfyOnMaxZoom: false,
+  chunkedLoading: true,
+  iconCreateFunction(cluster) {
+    const n = cluster.getChildCount();
+    const size = n < 10 ? 34 : n < 50 ? 40 : 46;
+    return L.divIcon({
+      className: "",
+      html: `<div class="cluster" style="--s:${size}px"><span>${n}</span></div>`,
+      iconSize: [size, size]
+    });
+  }
+}).addTo(map);
 
 let places = [];          // ที่พัก + ร้านอาหารทั้งหมด แต่ละรายการมี kind, dist, marker, reviews เพิ่มเข้าไป
 let currentPlace = null;  // สถานที่ที่เปิดการ์ดอยู่
@@ -71,7 +87,7 @@ function makeIcon(kind, delay = 0) {
   return L.divIcon({
     className: "",
     html: `<div class="pin ${kind}" style="--d:${delay}ms">
-      <svg viewBox="0 0 ${p.w} ${p.h}" aria-hidden="true">${p.shape}
+      <svg viewBox="0 0 ${p.w} ${p.h}" aria-hidden="true"><ellipse class="shadow" cx="${p.w / 2}" cy="${p.h - 1.5}" rx="6" ry="2"/>${p.shape}
         <svg class="glyph" x="${p.gx}" y="${p.gy}" width="${p.gs}" height="${p.gs}" viewBox="0 0 24 24"><use href="#${p.glyph}"/></svg>
       </svg></div>`,
     iconSize: [p.w, p.h],
@@ -318,10 +334,28 @@ function reviewSection(p) {
 const card = document.getElementById("card");
 const cardBody = document.getElementById("card-body");
 
-// ไฮไลต์หมุดของสถานที่ที่เปิดการ์ดอยู่ (ขยาย 1.1 เท่า)
-function markSelected(p) {
+// ไฮไลต์หมุดของสถานที่ที่เปิดการ์ดอยู่ (หมุดอาจยังรวมอยู่ในกลุ่ม จึงต้องเรียกซ้ำหลังซูม)
+function selectPin(p) {
   document.querySelectorAll(".pin.selected").forEach(el => el.classList.remove("selected"));
   p?.marker.getElement()?.querySelector(".pin")?.classList.add("selected");
+}
+map.on("zoomend moveend", () => selectPin(currentPlace));
+
+// ไฮไลต์หมุดและแถวในรายการของสถานที่ที่เปิดการ์ดอยู่
+function markSelected(p) {
+  selectPin(p);
+  document.querySelectorAll(".result.selected").forEach(el => {
+    el.classList.remove("selected");
+    el.removeAttribute("aria-current");
+  });
+  if (!p) return;
+  const row = resultsEl.querySelector(`.result[data-key="${keyOf(p)}"]`);
+  if (row) {
+    row.classList.add("selected");
+    row.setAttribute("aria-current", "true");
+    // กดจากหมุดบนแผนที่ ให้เลื่อนรายการไปหาแถวนั้นด้วย
+    row.scrollIntoView({ block: "center", behavior: "smooth" });
+  }
 }
 
 function showCard(p) {
@@ -699,7 +733,7 @@ function render() {
   const shown = places.filter(matches).sort((a, b) => a.dist - b.dist);
 
   markerLayer.clearLayers();
-  shown.forEach(p => markerLayer.addLayer(p.marker));
+  markerLayer.addLayers(shown.map(p => p.marker)); // ใส่ทีเดียวทั้งชุด เร็วกว่าใส่ทีละหมุด
 
   document.getElementById("fav-count").textContent = favs.size ? ` ${favs.size}` : "";
   countEl.textContent = `พบ ${shown.length} แห่ง`;
@@ -713,7 +747,8 @@ function render() {
     return;
   }
 
-  shown.forEach(p => {
+  // สร้าง HTML ของทุกแถวเป็นข้อความก้อนเดียวแล้วใส่ทีเดียว (เร็วกว่าสร้างทีละแถว)
+  resultsEl.innerHTML = shown.map(p => {
     const r = rating(p);
     const meta = p.kind === "dorm"
       ? [dormLabel(p),
@@ -721,18 +756,22 @@ function render() {
          vacantText(p)].filter(Boolean).join(" · ")
       : [esc(p.category), esc(p.price_range || "")].filter(Boolean).join(" · ");
 
-    const li = document.createElement("li");
-    li.innerHTML = `
-      <button class="result">
+    return `<li>
+      <button class="result${currentPlace && keyOf(currentPlace) === keyOf(p) ? " selected" : ""}" data-key="${keyOf(p)}">
         <span class="kind-badge ${p.kind}">${icon(p.kind === "dorm" ? "bed" : "food")}</span>
         <span class="name">${esc(p.name)}${favs.has(keyOf(p)) ? ` <span class="fav-mark" aria-label="รายการโปรด">♥</span>` : ""}</span>
         <span class="dist">${shortDistance(p.dist)}</span>
         <span class="meta">${meta}${r ? ` · <span class="rating">★ ${r.avg.toFixed(1)}</span>` : ""}</span>
-      </button>`;
-    li.querySelector("button").addEventListener("click", () => focusPlace(p));
-    resultsEl.appendChild(li);
-  });
+      </button></li>`;
+  }).join("");
 }
+
+// กดแถวในรายการ (ใช้ตัวดักเดียวที่รายการ แทนการผูกทุกแถว)
+resultsEl.addEventListener("click", e => {
+  const key = e.target.closest(".result")?.dataset.key;
+  const p = key && places.find(x => keyOf(x) === key);
+  if (p) focusPlace(p);
+});
 
 // กดรายการแล้วเลื่อนแผนที่ไปที่สถานที่นั้นและเปิดการ์ด
 function focusPlace(p) {
@@ -743,7 +782,8 @@ function focusPlace(p) {
   const zoom = 17;
   const shifted = map.project([p.lat, p.lng], zoom).add([0, map.getSize().y * 0.25]);
   map.flyTo(map.unproject(shifted, zoom), zoom, { duration: 0.6 });
-  p.marker.openTooltip();
+  // รอให้ซูมเสร็จก่อน หมุดถึงจะแยกออกจากกลุ่มและเปิดป้ายชื่อได้
+  map.once("moveend", () => p.marker.openTooltip());
 }
 
 // ===== 13) หมุดวิทยาลัย + วงรัศมี 500 ม. 1 กม. และ 2 กม. =====
@@ -835,9 +875,14 @@ const distSel = document.getElementById("max-dist");
 const airChk = document.getElementById("air");
 const dormFields = document.querySelectorAll('[data-for="dorm"]');
 
+// รอให้หยุดพิมพ์ 200 มิลลิวินาทีก่อนค่อยค้นหา ไม่ต้องวาดใหม่ทุกตัวอักษร
+let searchTimer;
 qInput.addEventListener("input", () => {
-  filters.q = qInput.value.trim().toLowerCase();
-  render();
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => {
+    filters.q = qInput.value.trim().toLowerCase();
+    render();
+  }, 200);
 });
 budgetSel.addEventListener("change", () => { filters.budget = Number(budgetSel.value); render(); });
 dormTypeSel.addEventListener("change", () => { filters.dormType = dormTypeSel.value; render(); });

@@ -32,6 +32,7 @@
   --surface: #FFFFFF;
   --surface-2: #EAF4F7;
   --surface-hover: #F0F5F9;
+  --tile-filter: none;       /* โหมดมืดจะกลับสีแผนที่ */
   --ink: #172B3A;
   --muted: #526577;
   --inverse: #FFFFFF;
@@ -39,7 +40,6 @@
   --line-strong: #AABAC8;
   --overlay: rgba(23, 43, 58, .45);
   --skeleton: #E6EDF3;
-  --tile-filter: none;       /* โหมดมืดจะกลับสีแผนที่ */
   --logo-glow: drop-shadow(0 2px 3px rgba(21, 94, 117, .25));
 
   /* ฟอนต์ */
@@ -66,10 +66,10 @@
     --lotus: #F49AB6; --heart: #F7728F; --star: #FBBF24;
     --pin-dorm: #60A5FA; --pin-food: #FB923C; --pin-college: #A78BFA; --pin-me: #78C5D6;
     --ok: #4ADE80; --ok-bg: #153B2B; --no: #F87171; --no-bg: #451F25; --pending: #FBBF24; --pending-bg: #45351B;
+    --tile-filter: invert(1) hue-rotate(180deg) brightness(.85) contrast(.9) saturate(.5);
     --bg: #0B1724; --surface: #13283A; --surface-2: #19394A; --surface-hover: #203B4F;
     --ink: #E8F0F7; --muted: #B8C6D3; --inverse: #0B1724; --line: #34495B; --line-strong: #526577;
     --overlay: rgba(0, 0, 0, .6); --skeleton: #1C3346;
-    --tile-filter: invert(1) hue-rotate(180deg) brightness(.85) contrast(.9) saturate(.5);
     --logo-glow: drop-shadow(0 0 1px rgba(255, 255, 255, .9)) drop-shadow(0 0 6px rgba(120, 197, 214, .45));
     --shadow-card: 0 2px 12px rgba(0, 0, 0, .3); --shadow-float: 0 4px 16px rgba(0, 0, 0, .45); --shadow-sheet: 0 -4px 24px rgba(0, 0, 0, .4);
     color-scheme: dark;
@@ -82,10 +82,10 @@
   --lotus: #F49AB6; --heart: #F7728F; --star: #FBBF24;
   --pin-dorm: #60A5FA; --pin-food: #FB923C; --pin-college: #A78BFA; --pin-me: #78C5D6;
   --ok: #4ADE80; --ok-bg: #153B2B; --no: #F87171; --no-bg: #451F25; --pending: #FBBF24; --pending-bg: #45351B;
+  --tile-filter: invert(1) hue-rotate(180deg) brightness(.85) contrast(.9) saturate(.5);
   --bg: #0B1724; --surface: #13283A; --surface-2: #19394A; --surface-hover: #203B4F;
   --ink: #E8F0F7; --muted: #B8C6D3; --inverse: #0B1724; --line: #34495B; --line-strong: #526577;
   --overlay: rgba(0, 0, 0, .6); --skeleton: #1C3346;
-  --tile-filter: invert(1) hue-rotate(180deg) brightness(.85) contrast(.9) saturate(.5);
   --logo-glow: drop-shadow(0 0 1px rgba(255, 255, 255, .9)) drop-shadow(0 0 6px rgba(120, 197, 214, .45));
   --shadow-card: 0 2px 12px rgba(0, 0, 0, .3); --shadow-float: 0 4px 16px rgba(0, 0, 0, .45); --shadow-sheet: 0 -4px 24px rgba(0, 0, 0, .4);
   color-scheme: dark;
@@ -303,6 +303,31 @@ button:focus-visible, a:focus-visible, select:focus-visible { outline: 2px solid
 }
 .result:hover, .result:focus-visible { border-color: var(--primary); background: var(--surface-hover); outline: none; }
 .result:active { transform: scale(.99); }
+/* วงกลมรวมหมุดที่อยู่ใกล้กัน */
+.cluster {
+  width: var(--s); height: var(--s); border-radius: 50%;
+  display: grid; place-items: center;
+  background: var(--primary); color: #fff;
+  border: 3px solid #fff;
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--secondary) 35%, transparent);
+  font-family: var(--f-num); font-weight: 600; font-size: .9rem;
+  cursor: pointer; transition: transform .15s;
+}
+.leaflet-marker-icon:hover .cluster { transform: scale(1.08); }
+/* แถวที่กำลังเปิดการ์ดอยู่: ขอบส้ม แสงเรืองรอบการ์ด และแถบสีด้านซ้าย */
+.result { position: relative; }
+.result.selected {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+  box-shadow: 0 0 0 1px var(--accent), 0 0 16px color-mix(in srgb, var(--accent) 45%, transparent);
+  animation: row-glow .6s ease-out;
+}
+.result.selected::before {
+  content: ""; position: absolute; left: -1px; top: 10px; bottom: 10px; width: 4px;
+  border-radius: 0 4px 4px 0; background: var(--accent);
+}
+.result.selected .name { color: var(--accent); }
+@keyframes row-glow { from { box-shadow: 0 0 0 1px var(--accent), 0 0 0 6px color-mix(in srgb, var(--accent) 35%, transparent); } }
 .kind-badge {
   grid-row: span 2;
   width: 34px; height: 34px;
@@ -371,8 +396,8 @@ button:focus-visible, a:focus-visible, select:focus-visible { outline: 2px solid
 /* ===== แผนที่ ===== */
 .map-wrap { flex: 1; position: relative; min-width: 0; }
 #map { position: absolute; inset: 0; background: var(--bg); }
-.leaflet-tile-pane { filter: var(--tile-filter); }
 .leaflet-container { font-family: var(--f-body); }
+.leaflet-tile-pane { filter: var(--tile-filter); }
 .leaflet-tooltip { font-family: var(--f-head); font-weight: 500; background: var(--surface); color: var(--ink); border-color: var(--line); box-shadow: var(--shadow-float); }
 .leaflet-tooltip-top::before { border-top-color: var(--surface); }
 .leaflet-bar a { background: var(--surface); color: var(--ink); border-color: var(--line); }
@@ -381,7 +406,8 @@ button:focus-visible, a:focus-visible, select:focus-visible { outline: 2px solid
 .leaflet-control-attribution a { color: var(--primary); }
 
 /* หมุด: ที่พัก = หยดน้ำ + เตียง, ร้านอาหาร = กล่องโค้ง + ช้อนส้อม, วิทยาลัย = หกเหลี่ยม + หมวก */
-.pin { position: relative; width: 100%; height: 100%; transform-origin: 50% 100%; transition: transform .15s ease-out; filter: drop-shadow(0 2px 3px rgba(0,0,0,.35)); }
+.pin { position: relative; width: 100%; height: 100%; transform-origin: 50% 100%; transition: transform .15s ease-out; }
+.pin .shadow { fill: rgba(0,0,0,.28); }
 .pin svg { display: block; width: 100%; height: 100%; overflow: visible; }
 .pin .shape { stroke: #fff; stroke-width: 2; }
 .pin.dorm .shape { fill: var(--pin-dorm); }
