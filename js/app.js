@@ -124,6 +124,7 @@ const baht = n => Math.round(n).toLocaleString();
 
 // ช่องที่ยังไม่มีข้อมูล (เช่น หอที่นำเข้าจาก Google Maps ยังไม่ได้กรอกราคา)
 const WAIT = `<span class="wait">รอข้อมูล</span>`;
+const ASK = `<span class="wait">โทรสอบถาม</span>`;  // ค่าห้อง/ค่าน้ำ/ค่าไฟ ที่หอไม่ได้ประกาศ ให้โทรถามเอง
 const dormLabel = p => (p.type ? `หอ${esc(p.type)}` : "หอพัก");
 
 function vacantText(p) {
@@ -237,12 +238,13 @@ function dormCard(p) {
     ${gallery(p)}
     <h2>${esc(p.name)}</h2>
     <p class="sub">${p.type ? `ที่พัก${esc(p.type)}` : "ที่พัก"}${vacant ? ` · ${vacant}` : ""} ${ratingBadge(p)}</p>
-    <p class="price-big">${p.price != null ? `<b>${baht(p.price)}</b> บาท/เดือน` : `ค่าห้อง ${WAIT}`}</p>
+    <p class="price-big">${p.price != null ? `<b>${baht(p.price)}</b> บาท/เดือน` : `ค่าห้อง ${ASK}`}</p>
+    ${p.price_note ? `<p class="price-note">${esc(p.price_note)}</p>` : ""}
     ${cardActions(p)}
     <dl>
-      <dt>ค่าห้อง</dt><dd>${p.price != null ? `${p.price.toLocaleString()} บาท/เดือน` : WAIT}</dd>
-      <dt>ค่าไฟ</dt><dd>${p.electric != null ? `${p.electric} บาท/หน่วย` : WAIT}</dd>
-      <dt>ค่าน้ำ</dt><dd>${p.water != null ? `${p.water} บาท/${esc(p.water_unit)}` : WAIT}</dd>
+      <dt>ค่าห้อง</dt><dd>${p.price != null ? `${p.price.toLocaleString()} บาท/เดือน` : ASK}</dd>
+      <dt>ค่าไฟ</dt><dd>${p.electric != null ? `${p.electric} บาท/หน่วย` : ASK}</dd>
+      <dt>ค่าน้ำ</dt><dd>${p.water != null ? `${p.water} บาท/${esc(p.water_unit)}` : ASK}</dd>
       <dt>มัดจำ</dt><dd>${esc(p.deposit || "-")}</dd>
       <dt>ปิดหอ</dt><dd>${esc(p.curfew || "-")}</dd>
       <dt>ระยะจากวิทยาลัย</dt><dd>${distanceText(p.dist)}</dd>
@@ -632,9 +634,9 @@ function renderCompare() {
   // แต่ละแถว: [หัวข้อ, ค่าที่ใช้เทียบ, ข้อความที่แสดง, ใช้ค่าน้อยสุดหรือมากสุดเป็น "ดีที่สุด"]
   const rows = [
     ["ประเภท", dorms.map(() => null), dorms.map(d => dormLabel(d))],
-    ["ค่าห้อง/เดือน", dorms.map(d => d.price), dorms.map(d => (d.price != null ? `${baht(d.price)} บ.` : WAIT)), Math.min],
-    ["ค่าไฟ/หน่วย", dorms.map(d => d.electric), dorms.map(d => (d.electric != null ? `${d.electric} บ.` : WAIT)), Math.min],
-    ["ค่าน้ำ", dorms.map(() => null), dorms.map(d => (d.water != null ? `${d.water} บ./${esc(d.water_unit)}` : WAIT))],
+    ["ค่าห้อง/เดือน", dorms.map(d => d.price), dorms.map(d => (d.price != null ? `${baht(d.price)} บ.` : ASK)), Math.min],
+    ["ค่าไฟ/หน่วย", dorms.map(d => d.electric), dorms.map(d => (d.electric != null ? `${d.electric} บ.` : ASK)), Math.min],
+    ["ค่าน้ำ", dorms.map(() => null), dorms.map(d => (d.water != null ? `${d.water} บ./${esc(d.water_unit)}` : ASK))],
     ["รวมต่อเดือน (ประมาณ)", costs, costs.map(c => (c != null ? `<b>${baht(c)} บ.</b>` : WAIT)), Math.min],
     ["มัดจำ", dorms.map(() => null), dorms.map(d => esc(d.deposit || "-"))],
     ["ห้องว่าง", dorms.map(d => d.vacant), dorms.map(d => (d.vacant == null ? WAIT : d.vacant > 0 ? `${d.vacant} ห้อง` : "เต็ม")), Math.max],
@@ -752,7 +754,7 @@ function render() {
     const r = rating(p);
     const meta = p.kind === "dorm"
       ? [dormLabel(p),
-         p.price != null ? `<span class="price num">${baht(p.price)} บ./เดือน</span>` : "ค่าห้อง: รอข้อมูล",
+         p.price != null ? `<span class="price num">${baht(p.price)} บ./เดือน</span>` : "ค่าห้อง: โทรสอบถาม",
          vacantText(p)].filter(Boolean).join(" · ")
       : [esc(p.category), esc(p.price_range || "")].filter(Boolean).join(" · ");
 

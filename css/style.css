@@ -360,6 +360,7 @@ button:focus-visible, a:focus-visible, select:focus-visible { outline: 2px solid
 .empty img { width: 132px; }
 .empty b { font-family: var(--f-head); font-size: 1.05rem; color: var(--ink); }
 .empty .btn-primary { margin-top: 6px; }
+.price-note { margin: -4px 0 10px; font-size: .85rem; color: var(--muted); }
 .loading-cat { list-style: none; display: grid; justify-items: center; padding: 6px 0 2px; }
 .loading-cat img { width: 96px; animation: sniff 1.2s ease-in-out infinite; }
 @keyframes sniff { 50% { transform: translateX(6px) rotate(3deg); } }
